@@ -30,3 +30,5 @@ Reddit
  +3
 6. Image Loading
 Coil3: The go-to library for loading organization logos and event banners from a URL.
+
+Some Sort of an SQL for the backend storage of the events

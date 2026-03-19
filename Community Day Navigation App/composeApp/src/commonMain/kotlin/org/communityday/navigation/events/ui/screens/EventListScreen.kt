@@ -19,9 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import org.communityday.navigation.events.data.Event
 import org.communityday.navigation.events.data.EventCategory
-import org.communityday.navigation.events.data.MockEvents
+import org.communityday.navigation.events.di.ServiceLocator
 
 @Composable
 fun EventListScreen(
@@ -33,7 +34,39 @@ fun EventListScreen(
     val ActionOrange = Color(0xFFFF8C00)
     val Turquoise = Color(0xFF40E0D0)
     
-    val events = remember { MockEvents.getAllEvents() }
+    var events by remember { mutableStateOf<List<Event>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    
+    val coroutineScope = rememberCoroutineScope()
+    val repository = ServiceLocator.eventRepository
+    
+    // Load events on composition
+    LaunchedEffect(Unit) {
+        coroutineScope.launch {
+            isLoading = true
+            errorMessage = null
+            
+            repository.getAllEvents()
+                .onSuccess { loadedEvents ->
+                    events = loadedEvents
+                    isLoading = false
+                }
+                .onFailure { error ->
+                    errorMessage = "Failed to load events: ${error.message}"
+                    // Fallback to mock data for development
+                    events = repository.getMockEvents()
+                    isLoading = false
+                }
+        }
+    }
+    
+    // Listen for real-time updates
+    LaunchedEffect(Unit) {
+        repository.getEventsStream().collect { updatedEvents ->
+            events = updatedEvents
+        }
+    }
     
     Column(
         modifier = modifier
@@ -50,19 +83,63 @@ fun EventListScreen(
             modifier = Modifier.padding(bottom = 16.dp)
         )
         
-        // Event List
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(events) { event ->
-                EventCard(
-                    event = event,
-                    onClick = { onEventClick(event) },
-                    NavyBlue = NavyBlue,
-                    Silver = Silver,
-                    ActionOrange = ActionOrange,
-                    Turquoise = Turquoise
+        // Loading indicator
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    color = Turquoise,
+                    modifier = Modifier.size(48.dp)
                 )
+            }
+        }
+        
+        // Error message
+        errorMessage?.let { message ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF4A1A1A)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "⚠️ $message",
+                        color = Color.Red,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        text = "Showing sample events for development",
+                        color = Silver.copy(alpha = 0.8f),
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+        
+        // Event List
+        if (!isLoading) {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(events) { event ->
+                    EventCard(
+                        event = event,
+                        onClick = { onEventClick(event) },
+                        NavyBlue = NavyBlue,
+                        Silver = Silver,
+                        ActionOrange = ActionOrange,
+                        Turquoise = Turquoise
+                    )
+                }
             }
         }
     }

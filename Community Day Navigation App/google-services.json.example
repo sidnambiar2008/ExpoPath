@@ -1,0 +1,21 @@
+// Firebase configuration placeholder
+// Replace this with your actual google-services.json from Firebase Console
+// This file should contain your Firebase project configuration
+{
+  "project_info": {
+    "project_number": "YOUR_PROJECT_NUMBER",
+    "project_id": "community-day-navigation",
+    "storage_bucket": "community-day-navigation.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "YOUR_ANDROID_APP_ID",
+        "android_client_info": {
+          "package_name": "org.communityday.navigation.events"
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
