@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.googleServices)
 }
 
 kotlin {
@@ -108,9 +109,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 }
-
-// Apply Google Services plugin for Android
-plugins.apply(libs.plugins.googleServices.get().pluginId)
 
 dependencies {
     debugImplementation(libs.compose.uiTooling)
