@@ -4,8 +4,8 @@ import org.communityday.navigation.events.data.EventService
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
-object EventServiceFactory {
-    fun createEventService(): EventService {
+actual object EventServiceFactory {
+    actual fun createEventService(): EventService {
         // JS implementation - can use fetch API or mock for now
         return MockEventService()
     }

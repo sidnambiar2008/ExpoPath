@@ -68,7 +68,7 @@ fun App() {
 }
 
 @Composable
-private fun WelcomeScreen(
+fun WelcomeScreen(
     onGetStarted: () -> Unit,
     NavyBlue: androidx.compose.ui.graphics.Color,
     Silver: androidx.compose.ui.graphics.Color,

@@ -3,7 +3,7 @@ package org.communityday.navigation.events
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import org.communityday.navigation.events.ui.screens.EventListScreen
-import org.communityday.navigation.events.ui.screens.WelcomeScreen
+import org.communityday.navigation.events.WelcomeScreen
 import org.communityday.navigation.events.ui.screens.EventDetailScreen
 import org.communityday.navigation.events.data.Event
 import org.communityday.navigation.events.data.EventCategory
@@ -41,16 +41,18 @@ fun EventDetailScreenPreview() {
         id = "1",
         title = "Sample Event",
         description = "This is a sample event for preview",
-        date = "2024-01-15",
-        time = "10:00 AM",
         location = "Sample Location",
-        category = EventCategory.TECHNOLOGY,
-        tags = listOf("android", "kotlin", "compose"),
+        latitude = 40.7128,
+        longitude = -74.0060,
+        startTime = "10:00 AM",
+        endTime = "11:00 AM",
+        category = EventCategory.TALK,
+        room = "Room 101",
         speaker = "John Doe",
-        maxAttendees = 100,
-        currentAttendees = 45,
+        capacity = 100,
+        registeredCount = 45,
         imageUrl = null,
-        isRegistered = false
+        tags = listOf("android", "kotlin", "compose")
     )
     
     EventDetailScreen(

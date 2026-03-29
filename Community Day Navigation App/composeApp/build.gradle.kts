@@ -58,6 +58,11 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            // Firebase dependencies - use BOM platform with string notation
+            implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+            implementation(libs.firebase.analytics)
+            implementation(libs.firebase.firestore)
+            implementation(libs.firebase.auth)
             implementation(libs.ktor.client.android)
         }
         commonMain.dependencies {
