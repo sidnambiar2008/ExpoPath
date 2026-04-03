@@ -13,16 +13,12 @@ plugins {
 }
 
 kotlin {
+    // Add this line to create shared iOS source set automatically
+    applyDefaultHierarchyTemplate()
+    
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
-        }
-    }
-
-    // Apply language settings to all source sets
-    sourceSets.all {
-        languageSettings {
-            optIn("kotlin.RequiresOptIn")
         }
     }
 
@@ -50,46 +46,64 @@ kotlin {
     }
 
     sourceSets {
-        
-        androidMain.dependencies {
-            implementation(libs.compose.uiToolingPreview)
-            implementation(libs.androidx.activity.compose)
-            // Firebase dependencies - use BOM platform with string notation
-            implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
-            implementation(libs.firebase.analytics)
-            implementation(libs.firebase.firestore)
-            implementation(libs.firebase.auth)
-            implementation(libs.ktor.client.android)
+        // Use "val ... by getting" for ALL of them to stay safe
+        val commonMain by getting {
+            dependencies {
+                implementation(libs.compose.runtime)
+                implementation(libs.compose.foundation)
+                implementation(libs.compose.material3)
+                implementation(libs.compose.ui)
+                implementation(libs.compose.components.resources)
+                implementation(libs.androidx.lifecycle.viewmodelCompose)
+                implementation(libs.androidx.lifecycle.runtimeCompose)
+                implementation(compose.materialIconsExtended)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.ktor.client.logging)
+                
+                // GitLive Firebase (Cross-platform versions)
+                implementation("dev.gitlive:firebase-app:2.1.0")
+                implementation("dev.gitlive:firebase-auth:2.1.0")
+                implementation("dev.gitlive:firebase-firestore:2.1.0")
+                implementation("dev.gitlive:firebase-analytics:2.1.0")
+            }
         }
-        commonMain.dependencies {
-            implementation(libs.compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.material3)
-            implementation(libs.compose.ui)
-            implementation(libs.compose.components.resources)
-            implementation(libs.androidx.lifecycle.viewmodelCompose)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation(compose.materialIconsExtended)
-            implementation(libs.ktor.client.core)
-            implementation(libs.ktor.client.content.negotiation)
-            implementation(libs.ktor.serialization.kotlinx.json)
-            implementation(libs.ktor.client.logging)
-            // Firebase Kotlin SDK (GitLive) - works for Android, iOS, and Web (js())
-            implementation("dev.gitlive:firebase-app:2.4.0")
-            implementation("dev.gitlive:firebase-auth:2.4.0")
-            implementation("dev.gitlive:firebase-firestore:2.4.0")
-            implementation("dev.gitlive:firebase-analytics:2.4.0")
+
+        val androidMain by getting {
+            dependencies {
+                implementation(libs.compose.uiToolingPreview)
+                implementation(libs.androidx.activity.compose)
+                implementation(libs.ktor.client.android)
+            }
         }
-        commonTest.dependencies {
-            implementation(libs.kotlin.test)
+
+        val commonTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+            }
         }
-        iosMain.dependencies {
-            implementation(libs.ktor.client.ios)
+
+        val iosMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.ios)
+            }
         }
-        jvmMain.dependencies {
+
+        val jvmMain by getting {
+            // Can leave empty, but keep for structure
         }
-        jsMain.dependencies {
-            implementation(libs.ktor.client.js)
+
+        val jsMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.js)
+                // Add these npm dependencies to provide the polyfills
+                implementation(npm("browserify-zlib", "0.2.0"))
+                implementation(npm("stream-browserify", "3.0.0"))
+                implementation(npm("buffer", "6.0.3"))
+                implementation(npm("process", "0.11.10"))
+                implementation(npm("util", "0.12.5"))
+            }
         }
     }
 }

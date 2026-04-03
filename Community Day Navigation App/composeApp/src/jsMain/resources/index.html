@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Day App</title>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // 2. YOUR CONFIG (Get this from Firebase Console)
+       const firebaseConfig = {
+          apiKey: "AIzaSyAXAHUpJpvpxTgZ9xpM1wxKHR2bidG0GdA",
+          authDomain: "community-day-navigation-15748.firebaseapp.com",
+          projectId: "community-day-navigation-15748",
+          storageBucket: "community-day-navigation-15748.firebasestorage.app",
+          messagingSenderId: "512193332305",
+          appId: "1:512193332305:web:890e7d8a84c3886d4ea470",
+          measurementId: "G-SWD092HQYC"
+        };
+
+        // 3. This makes Firebase "globally" available to your Kotlin code
+        window.firebaseApp = initializeApp(firebaseConfig);
+    </script>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="composeApp.js"></script>
+</body>
+</html>

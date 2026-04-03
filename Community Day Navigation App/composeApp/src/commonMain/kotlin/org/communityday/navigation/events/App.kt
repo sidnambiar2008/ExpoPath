@@ -20,7 +20,6 @@ import org.communityday.navigation.events.ui.screens.EventListScreen
 import org.communityday.navigation.events.ui.screens.EventDetailScreen
 
 import communitydaynavigationapp.composeapp.generated.resources.Res
-import communitydaynavigationapp.composeapp.generated.resources.compose_multiplatform
 
 sealed class Screen {
     object Welcome : Screen()
@@ -86,13 +85,14 @@ fun WelcomeScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Logo/Image
+        // Logo/Image - using a simple color placeholder for now
         AnimatedVisibility(showContent) {
-            Image(
-                painterResource(Res.drawable.compose_multiplatform), 
-                null,
-                modifier = Modifier.size(120.dp)
-            )
+            Box(
+                modifier = Modifier.size(120.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Logo", color = androidx.compose.ui.graphics.Color.White)
+            }
         }
         
         Spacer(modifier = Modifier.height(32.dp))
