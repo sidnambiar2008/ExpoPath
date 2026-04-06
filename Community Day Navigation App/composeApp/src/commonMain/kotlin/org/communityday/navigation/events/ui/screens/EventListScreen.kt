@@ -44,27 +44,30 @@ fun EventListScreen(
     var events by remember { mutableStateOf<List<Event>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-
+    var confCode by remember { mutableStateOf("") } // User input
+    var currentActiveCode by remember { mutableStateOf<String?>("communityday2026") } // Will become user query
     val coroutineScope = rememberCoroutineScope()
 
-    // 1. FIXED: Initialize the repository directly since ServiceLocator is gone
+    // Initialize the repository
     val repository = remember { EventRepository() }
 
     // Load events on composition
-    // Replace both existing LaunchedEffects with this:
-    LaunchedEffect(Unit) {
+    LaunchedEffect(currentActiveCode) {
+        val code = currentActiveCode
+        if (code.isNullOrBlank()) return@LaunchedEffect // Don't fetch if empty
+
         isLoading = true
         errorMessage = null
 
-        repository.getEventsStream()
+        // We pass the code to the repository stream
+        repository.getEventsStream(code)
             .catch { error ->
-                errorMessage = "Stream Error: ${error.message}"
-                events = repository.getMockEvents()
+                errorMessage = "Invalid Code or Connection Error"
                 isLoading = false
             }
             .collect { updatedEvents ->
                 events = updatedEvents
-                isLoading = false // Data has arrived, stop the spinner!
+                isLoading = false
             }
     }
     
@@ -111,7 +114,7 @@ fun EventListScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "⚠️ $message",
+                        text = message,
                         color = Color.Red,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(bottom = 8.dp)
