@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,10 +43,10 @@ fun EventListScreen(
     val Turquoise = Color(0xFF40E0D0)
 
     var events by remember { mutableStateOf<List<Event>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
+    var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var confCode by remember { mutableStateOf("") } // User input
-    var currentActiveCode by remember { mutableStateOf<String?>("communityday2026") } // Will become user query
+    var currentActiveCode by remember { mutableStateOf<String?>(null) } // Will become user query
     val coroutineScope = rememberCoroutineScope()
 
     // Initialize the repository
@@ -70,79 +71,126 @@ fun EventListScreen(
                 isLoading = false
             }
     }
-    
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(NavyBlue)
             .padding(16.dp)
     ) {
-        // Header
-        Text(
-            text = "Community Day Events",
-            color = Silver,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-        
-        // Loading indicator
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
+
+        // Event List
+        if (currentActiveCode == null)
+        {
+            Column(
+                modifier = Modifier,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                CircularProgressIndicator(
-                    color = Turquoise,
-                    modifier = Modifier.size(48.dp)
+                // Add Logo Here
+                //Search Bar UI
+                Text(
+                    text = "Enter Access Code",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Turquoise
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Enter the Event Code Provided by the Organizer",
+                    color = Silver,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = confCode,
+                    onValueChange = {confCode = it},
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = {Text("Code")},
+                    colors = OutlinedTextFieldDefaults.colors(
+                        // This is the text the user actually types
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+
+                        // This is the label text (the hint)
+                        focusedLabelColor = Turquoise,
+                        unfocusedLabelColor = Silver,
+
+                        // The border colors
+                        focusedBorderColor = Turquoise,
+                        unfocusedBorderColor = Silver,
+
+                        // The blinking cursor
+                        cursorColor = Turquoise,
+
+                        // Ensure the background of the text field itself is transparent
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent
+                    )
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = { if (confCode.isNotBlank()) currentActiveCode = confCode.trim() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Turquoise),
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Join Conference", color = NavyBlue, fontWeight = FontWeight.Bold)
+                }
+            }
+        } else
+        {
+          Row(
+              modifier = Modifier.fillMaxWidth().padding(16.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.SpaceBetween
+          )
+          {
+              Column {
+                  Text("Events", color = Silver, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                  Text("Code: $currentActiveCode", color = Turquoise, fontSize = 12.sp)
+              }
+              TextButton(onClick = { currentActiveCode = null }) {
+                  Text("Switch Code", color = ActionOrange)
+              }
+          }
+            if (isLoading)
+            {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center)
+                {
+                    CircularProgressIndicator(color = Turquoise)
+                }
+            }
+            else if (events.isEmpty())
+            {
+                Text(text = "No Events were found for this code", color = Silver, modifier = Modifier.padding(top = 8.dp))
+            }
+            else
+            {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp))
+                {
+                    items(events){event ->
+                        EventCard(
+                            event = event,
+                            onClick = {onEventClick(event)},
+                            NavyBlue = NavyBlue,
+                            Silver = Silver,
+                            ActionOrange = ActionOrange,
+                            Turquoise = Turquoise
+                        )
+                    }
+                }
             }
         }
-        
-        // Error message
+        // Error message (Shared for both states)
         errorMessage?.let { message ->
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF4A1A1A)
-                )
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF4A1A1A))
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = message,
-                        color = Color.Red,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Text(
-                        text = "Showing sample events for development",
-                        color = Silver.copy(alpha = 0.8f),
-                        fontSize = 12.sp
-                    )
-                }
-            }
-        }
-        
-        // Event List
-        if (!isLoading) {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(events) { event ->
-                    EventCard(
-                        event = event,
-                        onClick = { onEventClick(event) },
-                        NavyBlue = NavyBlue,
-                        Silver = Silver,
-                        ActionOrange = ActionOrange,
-                        Turquoise = Turquoise
-                    )
-                }
+                Text(text = message, color = Color.Red, modifier = Modifier.padding(16.dp))
             }
         }
     }

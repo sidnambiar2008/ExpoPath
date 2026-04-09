@@ -37,14 +37,33 @@ class EventRepository {
      * Real-time Stream for a specific conference
      */
     fun getEventsStream(confId: String): Flow<List<Event>> {
-        return getCollection(confId).snapshots.map { snapshot ->
-            snapshot.documents.map { doc ->
-                doc.data<Event>().copy(id = doc.id)
+        // We add .orderBy here to tell Firestore how to send the data
+        return getCollection(confId)
+            .orderBy("sortOrder") // 👈 This keeps your schedule in order
+            .snapshots
+            .map { snapshot ->
+                snapshot.documents.map { doc ->
+                    doc.data<Event>().copy(id = doc.id)
+                }
+            }.catch { e ->
+                println("Firestore Stream Error for $confId: ${e.message}")
+                emit(emptyList())
             }
-        }.catch { e ->
-            println("Firestore Stream Error for $confId: ${e.message}")
-            emit(emptyList())
-        }
+    }
+
+    fun getBoothsStream(confId: String): Flow<List<Booth>> {
+        return firestore
+            .collection("conferences/$confId/booths")
+            .snapshots
+            .map { snapshot ->
+                snapshot.documents.map { doc ->
+                    doc.data<Booth>().copy(id = doc.id)
+                }
+            }.catch { e ->
+        println("Firestore Stream Error for $confId: ${e.message}")
+        emit(emptyList())
+    }
+
     }
 
     /**
