@@ -8,6 +8,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBar
+
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,13 +21,62 @@ import org.jetbrains.compose.resources.painterResource
 import org.communityday.navigation.events.data.Event
 import org.communityday.navigation.events.ui.screens.EventListScreen
 import org.communityday.navigation.events.ui.screens.EventDetailScreen
+import kotlinx.serialization.Serializable
+
 
 import communitydaynavigationapp.composeapp.generated.resources.Res
+import org.communityday.navigation.events.ui.screens.BoothListScreen
 
-sealed class Screen {
-    object Welcome : Screen()
-    object EventList : Screen()
-    data class EventDetail(val event: Event) : Screen()
+sealed interface Screen {
+    @kotlinx.serialization.Serializable
+    data object Welcome : Screen
+    @kotlinx.serialization.Serializable
+    data object EventList : Screen
+
+    @Serializable data object BoothList: Screen
+    @Serializable data object Map: Screen
+    @Serializable data object Profile: Screen
+    @Serializable data class EventDetail(val event: Event) : Screen
+}
+
+@Composable
+fun BottomNavigationBar(
+    currentScreen: Screen,
+    onTabSelected: (Screen) -> Unit
+) {
+    androidx.compose.material3.NavigationBar {
+        // Tab 1: Events
+        androidx.compose.material3.NavigationBarItem(
+            selected = currentScreen is Screen.EventList,
+            onClick = { onTabSelected(Screen.EventList) },
+            label = { Text("Events") },
+            icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.DateRange, contentDescription = null) }
+        )
+
+        // Tab 2: Booths
+        androidx.compose.material3.NavigationBarItem(
+            selected = currentScreen is Screen.BoothList,
+            onClick = { onTabSelected(Screen.BoothList) },
+            label = { Text("Booths") },
+            icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.List, contentDescription = null) }
+        )
+
+        // Tab 3: Map
+        androidx.compose.material3.NavigationBarItem(
+            selected = currentScreen is Screen.Map,
+            onClick = { onTabSelected(Screen.Map) },
+            label = { Text("Map") },
+            icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.LocationOn, contentDescription = null) }
+        )
+
+        // Tab 4: Profile
+        androidx.compose.material3.NavigationBarItem(
+            selected = currentScreen is Screen.Profile,
+            onClick = { onTabSelected(Screen.Profile) },
+            label = { Text("Profile") },
+            icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.AccountCircle, contentDescription = null) }
+        )
+    }
 }
 
 @Composable
@@ -35,31 +87,64 @@ fun App() {
     val Turquoise = androidx.compose.ui.graphics.Color(0xFF40E0D0)
     
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Welcome) }
-    var isCodeAccepted by remember { mutableStateOf(false) }
-    
+
     MaterialTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            when (currentScreen) {
-                is Screen.Welcome -> WelcomeScreen(
-                    onGetStarted = { currentScreen = Screen.EventList },
-                    NavyBlue = NavyBlue,
-                    Silver = Silver,
-                    ActionOrange = ActionOrange,
-                    Turquoise = Turquoise
-                )
-                
-                is Screen.EventList -> EventListScreen(
-                    onEventClick = { event -> 
-                        currentScreen = Screen.EventDetail(event) 
-                    }
-                )
-                
-                is Screen.EventDetail -> {
-                    val event = (currentScreen as Screen.EventDetail).event
-                    EventDetailScreen(
-                        event = event,
-                        onBackClick = { currentScreen = Screen.EventList }
+        // 3. Logic to hide the bar on specific screens
+        val showBottomBar = currentScreen !is Screen.Welcome && currentScreen !is Screen.EventDetail
+
+        androidx.compose.material3.Scaffold(
+            bottomBar = {
+                if (showBottomBar) {
+                    BottomNavigationBar(
+                        currentScreen = currentScreen,
+                        onTabSelected = { selectedScreen: Screen -> currentScreen = selectedScreen }
                     )
+                }
+            }
+        ) { paddingValues ->
+            // 4. Content Area
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues) // Respects the space taken by the bottom bar
+            ) {
+                when (currentScreen) {
+                    is Screen.Welcome -> WelcomeScreen(
+                        onGetStarted = { currentScreen = Screen.EventList },
+                        NavyBlue = NavyBlue,
+                        Silver = Silver,
+                        ActionOrange = ActionOrange,
+                        Turquoise = Turquoise
+                    )
+
+                    is Screen.EventList -> EventListScreen(
+                        onEventClick = { event -> currentScreen = Screen.EventDetail(event) }
+                    )
+
+                    is Screen.BoothList -> {
+                        // We'll create the BoothListScreen composable next
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Booth List Coming Soon")
+                        }
+                    }
+
+                    is Screen.Map -> {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Map Screen Coming Soon")
+                        }
+                    }
+                    is Screen.Profile -> {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Profile Screen Coming Soon")
+                        }
+                    }
+
+                    is Screen.EventDetail -> {
+                        val event = (currentScreen as Screen.EventDetail).event
+                        EventDetailScreen(
+                            event = event,
+                            onBackClick = { currentScreen = Screen.EventList }
+                        )
+                    }
                 }
             }
         }

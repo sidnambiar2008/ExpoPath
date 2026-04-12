@@ -14,6 +14,7 @@ plugins {
 }
 
 kotlin {
+    @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
     // Add this line to create shared iOS source set automatically
     applyDefaultHierarchyTemplate()
     
@@ -42,7 +43,7 @@ kotlin {
     }
 
     js(IR) {
-        moduleName = "composeApp"
+        outputModuleName = "composeApp"
         browser {
             commonWebpackConfig {
                 outputFileName = "composeApp.js"
@@ -63,11 +64,13 @@ kotlin {
                 implementation(libs.compose.components.resources)
                 implementation(libs.androidx.lifecycle.viewmodelCompose)
                 implementation(libs.androidx.lifecycle.runtimeCompose)
-                
+                // Algolia InstantSearch for Compose
+             //   implementation(libs.algolia.client)
+              //  implementation(libs.algolia.instantsearch.compose) // Works for all platforms
+                // Required for the serialization we talked about earlier
+                implementation(libs.kotlinx.serialization.json)
 
-
-                
-                // Firebase (The new Multiplatform way)
+                // Firebase (The Multiplatform way)
                 implementation(libs.firebase.app)
                 implementation(libs.firebase.auth)
                 implementation(libs.firebase.firestore)
@@ -103,7 +106,16 @@ kotlin {
 
         val jsMain by getting {
             dependencies {
-                implementation(compose.ui) // This pulls in the Skiko JS dependency
+                implementation(compose.ui)
+
+                // Use a BOM inside a KMP SourceSet
+                //implementation(project.dependencies.platform("com.algolia:algoliasearch-client-kotlin-bom:3.38.1"))
+                // Now you can declare the library without a version,
+                // and the BOM will force it to the correct JS-compatible variant.
+
+               // implementation(libs.ktor.client.js)
+               // implementation(libs.firebase.app)
+
                 // Add these npm dependencies to provide the polyfills
                 implementation(npm("browserify-zlib", "0.2.0"))
                 implementation(npm("stream-browserify", "3.0.0"))
@@ -142,6 +154,24 @@ compose.desktop {
         }
     }
 }
+
+//configurations.all {
+  //  resolutionStrategy {
+  //      eachDependency {
+            // This is the GPS redirect. It stops Gradle from looking for
+            // the non-existent 'instantsearch' and forces it to 'instantsearch-compose'
+    //        if (requested.group == "com.algolia" &&
+      //          (requested.name == "instantsearch" || requested.name == "instantsearch-utils")) {
+        //        useTarget("com.algolia:instantsearch-compose:4.0.0")
+          //  }
+        //}
+    //}
+
+    // Keep ONLY these excludes. Do NOT exclude 'firebase-firestore-android'.
+    //exclude(group = "com.google.firebase", module = "firebase-common-ktx")
+    //exclude(group = "com.google.firebase", module = "firebase-auth-ktx")
+    //exclude(group = "com.google.firebase", module = "firebase-firestore-ktx")
+//}
 
 // Apply Google Services plugin only for Android builds
 if (project.plugins.hasPlugin("com.android.application")) {

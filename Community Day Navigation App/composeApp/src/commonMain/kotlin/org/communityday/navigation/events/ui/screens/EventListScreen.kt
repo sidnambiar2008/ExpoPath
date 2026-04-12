@@ -51,7 +51,11 @@ fun EventListScreen(
 
     // Initialize the repository
     val repository = remember { EventRepository() }
-
+    //al searcher = HitsSearcher(
+     //   applicationID = ApplicationID("YOUR_APP_ID"),
+      //  apiKey = APIKey("YOUR_SEARCH_ONLY_API_KEY"),
+       // indexName = IndexName("conferences_index")
+    //)
     // Load events on composition
     LaunchedEffect(currentActiveCode) {
         val code = currentActiveCode
