@@ -6,7 +6,9 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBar
@@ -22,10 +24,24 @@ import org.communityday.navigation.events.data.Event
 import org.communityday.navigation.events.ui.screens.EventListScreen
 import org.communityday.navigation.events.ui.screens.EventDetailScreen
 import kotlinx.serialization.Serializable
-
-
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+//import androidx.activity.compose.BackHandler
 import communitydaynavigationapp.composeapp.generated.resources.Res
+import communitydaynavigationapp.composeapp.generated.resources.ic_schedule
+import communitydaynavigationapp.composeapp.generated.resources.ic_map
+import communitydaynavigationapp.composeapp.generated.resources.ic_person
+import communitydaynavigationapp.composeapp.generated.resources.ic_store
+import communitydaynavigationapp.composeapp.generated.resources.ic_settings
+import org.communityday.navigation.events.data.Booth
+import org.communityday.navigation.events.ui.screens.BoothDetailScreen
 import org.communityday.navigation.events.ui.screens.BoothListScreen
+import org.communityday.navigation.events.ui.screens.SettingsScreen
 
 sealed interface Screen {
     @kotlinx.serialization.Serializable
@@ -34,65 +50,107 @@ sealed interface Screen {
     data object EventList : Screen
 
     @Serializable data object BoothList: Screen
+    @Serializable data class BoothDetail(val booth: Booth):Screen{
+
+    }
     @Serializable data object Map: Screen
     @Serializable data object Profile: Screen
+    @Serializable data object JoinConference : Screen
     @Serializable data class EventDetail(val event: Event) : Screen
+    @Serializable data object Settings: Screen
 }
+
 
 @Composable
 fun BottomNavigationBar(
     currentScreen: Screen,
     onTabSelected: (Screen) -> Unit
 ) {
-    androidx.compose.material3.NavigationBar {
+    NavigationBar {
         // Tab 1: Events
-      //  androidx.compose.material3.NavigationBarItem(
-       //     selected = currentScreen is Screen.EventList,
-        //    onClick = { onTabSelected(Screen.EventList) },
-        //    label = { Text("Events") },
-        //    icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.DateRange, contentDescription = null) }
-        //)
+        NavigationBarItem(
+            selected = currentScreen is Screen.EventList,
+            onClick = { onTabSelected(Screen.EventList) },
+            label = { Text("Events") },
+            icon = { Icon(
+                painter = painterResource(Res.drawable.ic_schedule),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            ) }
+        )
 
         // Tab 2: Booths
-       // androidx.compose.material3.NavigationBarItem(
-        //    selected = currentScreen is Screen.BoothList,
-        //    onClick = { onTabSelected(Screen.BoothList) },
-        //    label = { Text("Booths") },
-        //    icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.List, contentDescription = null) }
-        //)
+        NavigationBarItem(
+            selected = currentScreen is Screen.BoothList,
+            onClick = { onTabSelected(Screen.BoothList) },
+            label = { Text("Booths") },
+            icon = { Icon(
+                painter = painterResource(Res.drawable.ic_store),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            ) }
+        )
 
         // Tab 3: Map
-        //androidx.compose.material3.NavigationBarItem(
-         //   selected = currentScreen is Screen.Map,
-         //   onClick = { onTabSelected(Screen.Map) },
-         //   label = { Text("Map") },
-         //   icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.LocationOn, contentDescription = null) }
-        //)
+        NavigationBarItem(
+            selected = currentScreen is Screen.Map,
+            onClick = { onTabSelected(Screen.Map) },
+            label = { Text("Map") },
+            icon = { Icon(
+                painter = painterResource(Res.drawable.ic_map),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            ) }
+        )
 
         // Tab 4: Profile
-        //androidx.compose.material3.NavigationBarItem(
-         //   selected = currentScreen is Screen.Profile,
-         //   onClick = { onTabSelected(Screen.Profile) },
-         //   label = { Text("Profile") },
-          //  icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.AccountCircle, contentDescription = null) }
-      //  )
+        NavigationBarItem(
+            selected = currentScreen is Screen.Profile,
+            onClick = { onTabSelected(Screen.Profile) },
+            label = { Text("Profile") },
+            icon = { Icon(
+                painter = painterResource(Res.drawable.ic_person),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            ) }
+        )
+        // Tab 5: Settings
+        NavigationBarItem(
+            selected = currentScreen is Screen.Settings,
+            onClick = { onTabSelected(Screen.Settings) },
+            label = { Text("Settings") },
+            icon = { Icon(
+                painter = painterResource(Res.drawable.ic_settings),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            ) }
+        )
     }
 }
 
 @Composable
 fun App() {
-    val NavyBlue = androidx.compose.ui.graphics.Color(0xFF000033)
-    val Silver = androidx.compose.ui.graphics.Color(0xFFC0C0C0)
-    val ActionOrange = androidx.compose.ui.graphics.Color(0xFFFF8C00)
-    val Turquoise = androidx.compose.ui.graphics.Color(0xFF40E0D0)
-    
+    val NavyBlue = Color(0xFF000033)
+    val Silver = Color(0xFFC0C0C0)
+    val ActionOrange = Color(0xFFFF8C00)
+    val Turquoise = Color(0xFF40E0D0)
+
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Welcome) }
+    var isJoined by remember {mutableStateOf(false)}
+    var activeCode by remember { mutableStateOf("") }
 
     MaterialTheme {
         // 3. Logic to hide the bar on specific screens
-        val showBottomBar = currentScreen !is Screen.Welcome && currentScreen !is Screen.EventDetail
+        val showBottomBar = isJoined &&
+                currentScreen !is Screen.Welcome &&
+                currentScreen !is Screen.EventDetail &&
+                currentScreen !is Screen.JoinConference
 
-        androidx.compose.material3.Scaffold(
+       // BackHandler(enabled = currentScreen !is Screen.Welcome && currentScreen !is Screen.EventList) {
+            // If they are in a Detail screen or another tab, send them back to the Event List
+         //   currentScreen = Screen.EventList
+       // }
+        Scaffold(
             bottomBar = {
                 if (showBottomBar) {
                     BottomNavigationBar(
@@ -101,6 +159,7 @@ fun App() {
                     )
                 }
             }
+
         ) { paddingValues ->
             // 4. Content Area
             Box(modifier = Modifier
@@ -109,22 +168,44 @@ fun App() {
             ) {
                 when (currentScreen) {
                     is Screen.Welcome -> WelcomeScreen(
-                        onGetStarted = { currentScreen = Screen.EventList },
+                        onGetStarted = {
+                            currentScreen = Screen.JoinConference },
                         NavyBlue = NavyBlue,
                         Silver = Silver,
                         ActionOrange = ActionOrange,
-                        Turquoise = Turquoise
+                        Turquoise = Turquoise,
+                    )
+
+                    is Screen.JoinConference -> JoinConferenceScreen(
+                        NavyBlue = NavyBlue,
+                        Silver = Silver,
+                        Turquoise = Turquoise,
+                        onConferenceJoined = { code ->
+                            activeCode = code.trim()
+                            isJoined = true
+                            currentScreen = Screen.EventList
+                        }
                     )
 
                     is Screen.EventList -> EventListScreen(
-                        onEventClick = { event -> currentScreen = Screen.EventDetail(event) }
+                        confCode = activeCode,
+                        onEventClick = { event -> currentScreen = Screen.EventDetail(event) },
+                        onSwitchCode = {
+                            isJoined = false
+                            currentScreen = Screen.JoinConference
+
+                        }
                     )
 
-                    is Screen.BoothList -> {
-                        // We'll create the BoothListScreen composable next
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Booth List Coming Soon")
-                        }
+                    is Screen.BoothList -> BoothListScreen(
+                        confCode = activeCode,
+                        onBoothClick = {booth -> currentScreen = Screen.BoothDetail(booth)}
+                    )
+
+                    is Screen.BoothDetail -> {
+                        val booth = (currentScreen as Screen.BoothDetail).booth
+                        BoothDetailScreen(booth = booth,
+                            onBackClick = {currentScreen = Screen.BoothList})
                     }
 
                     is Screen.Map -> {
@@ -137,6 +218,14 @@ fun App() {
                             Text("Profile Screen Coming Soon")
                         }
                     }
+
+                    is Screen.Settings -> SettingsScreen(
+                        onBackClick = { currentScreen = Screen.EventList }, // Or return to the previous list
+                        onDeleteAccount = {
+                            // Handle Firebase account deletion here later
+                            println("Delete requested")
+                        }
+                    )
 
                     is Screen.EventDetail -> {
                         val event = (currentScreen as Screen.EventDetail).event
@@ -154,13 +243,13 @@ fun App() {
 @Composable
 fun WelcomeScreen(
     onGetStarted: () -> Unit,
-    NavyBlue: androidx.compose.ui.graphics.Color,
-    Silver: androidx.compose.ui.graphics.Color,
-    ActionOrange: androidx.compose.ui.graphics.Color,
-    Turquoise: androidx.compose.ui.graphics.Color
+    NavyBlue: Color,
+    Silver: Color,
+    ActionOrange: Color,
+    Turquoise: Color
 ) {
     var showContent by remember { mutableStateOf(false) }
-    
+
     Column(
         modifier = Modifier
             .background(NavyBlue)
@@ -179,9 +268,9 @@ fun WelcomeScreen(
                 Text("Logo", color = androidx.compose.ui.graphics.Color.White)
             }
         }
-        
+
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         // Title
         AnimatedVisibility(showContent) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -199,9 +288,9 @@ fun WelcomeScreen(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(48.dp))
-        
+
         // Description
         AnimatedVisibility(showContent) {
             Text(
@@ -212,9 +301,9 @@ fun WelcomeScreen(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
-        
+
         Spacer(modifier = Modifier.height(48.dp))
-        
+
         // Get Started Button
         AnimatedVisibility(showContent) {
             Button(
@@ -234,10 +323,70 @@ fun WelcomeScreen(
                 )
             }
         }
-        
+
         // Trigger animation
         LaunchedEffect(Unit) {
             showContent = true
+        }
+    }
+}
+
+@Composable
+fun JoinConferenceScreen(
+    onConferenceJoined: (String) -> Unit,
+    NavyBlue: Color,
+    Turquoise: Color,
+    Silver: Color
+) {
+    var confCode by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NavyBlue)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "Enter Access Code",
+            style = MaterialTheme.typography.headlineSmall,
+            color = Turquoise
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Enter the Event Code Provided by the Organizer",
+            color = Silver,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = confCode,
+            onValueChange = { confCode = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text("Code") },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedLabelColor = Turquoise,
+                unfocusedLabelColor = Silver,
+                focusedBorderColor = Turquoise,
+                unfocusedBorderColor = Silver,
+                cursorColor = Turquoise,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+            )
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = { if (confCode.isNotBlank()) onConferenceJoined(confCode.trim()) },
+            colors = ButtonDefaults.buttonColors(containerColor = Turquoise),
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("Join Conference", color = NavyBlue, fontWeight = FontWeight.Bold)
         }
     }
 }

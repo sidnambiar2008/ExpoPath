@@ -51,17 +51,20 @@ class EventRepository {
             }
     }
 
-    fun getBoothsStream(confId: String): Flow<List<Booth>> {
-        return firestore
-            .collection("conferences/$confId/booths")
-            .snapshots
+    fun getBoothsStream(confCode: String): Flow<List<Booth>> {
+        return firestore.collection("conferences")
+            .document(confCode)
+            .collection("booths")
+            .snapshots()
             .map { snapshot ->
                 snapshot.documents.map { doc ->
                     doc.data<Booth>().copy(id = doc.id)
                 }
-            }.catch { e ->
-        println("Firestore Stream Error for $confId: ${e.message}")
-        emit(emptyList())
+            }
+            .catch { e ->
+                println("Booth Fetch Error: ${e.message}")
+                emit(emptyList()) // Returns an empty list instead of crashing the UI
+            }
     }
 
     }
@@ -84,4 +87,3 @@ class EventRepository {
             )
         )
     }
-}

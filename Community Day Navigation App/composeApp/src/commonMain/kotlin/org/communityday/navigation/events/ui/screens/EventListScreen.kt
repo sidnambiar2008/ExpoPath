@@ -34,7 +34,9 @@ import org.communityday.navigation.events.data.EventRepository
 
 @Composable
 fun EventListScreen(
+    confCode: String,        // Parameter from App.kt
     onEventClick: (Event) -> Unit,
+    onSwitchCode: () -> Unit, // Callback to go back
     modifier: Modifier = Modifier
 ) {
     val NavyBlue = Color(0xFF000033)
@@ -45,32 +47,29 @@ fun EventListScreen(
     var events by remember { mutableStateOf<List<Event>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var confCode by remember { mutableStateOf("") } // User input
-    var currentActiveCode by remember { mutableStateOf<String?>(null) } // Will become user query
-    val coroutineScope = rememberCoroutineScope()
 
-    // Initialize the repository
     val repository = remember { EventRepository() }
-    //al searcher = HitsSearcher(
-     //   applicationID = ApplicationID("YOUR_APP_ID"),
-      //  apiKey = APIKey("YOUR_SEARCH_ONLY_API_KEY"),
-       // indexName = IndexName("conferences_index")
-    //)
-    // Load events on composition
-    LaunchedEffect(currentActiveCode) {
-        val code = currentActiveCode
-        if (code.isNullOrBlank()) return@LaunchedEffect // Don't fetch if empty
+
+    LaunchedEffect(confCode) {
+        // This MUST use the 'confCode' from the function parameters
+        if (confCode.isBlank()) {
+            println("DEBUG: confCode is blank, skipping fetch")
+            return@LaunchedEffect
+        }
 
         isLoading = true
         errorMessage = null
 
-        // We pass the code to the repository stream
-        repository.getEventsStream(code)
+        println("DEBUG: Starting fetch for code: $confCode")
+
+        repository.getEventsStream(confCode)
             .catch { error ->
+                println("DEBUG: Fetch failed: ${error.message}")
                 errorMessage = "Invalid Code or Connection Error"
                 isLoading = false
             }
             .collect { updatedEvents ->
+                println("DEBUG: Received ${updatedEvents.size} events")
                 events = updatedEvents
                 isLoading = false
             }
@@ -82,112 +81,22 @@ fun EventListScreen(
             .background(NavyBlue)
             .padding(16.dp)
     ) {
-
-        // Event List
-        if (currentActiveCode == null)
-        {
-            Column(
-                modifier = Modifier,
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                // Add Logo Here
-                //Search Bar UI
-                Text(
-                    text = "Enter Access Code",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Turquoise
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Enter the Event Code Provided by the Organizer",
-                    color = Silver,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = confCode,
-                    onValueChange = {confCode = it},
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    label = {Text("Code")},
-                    colors = OutlinedTextFieldDefaults.colors(
-                        // This is the text the user actually types
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-
-                        // This is the label text (the hint)
-                        focusedLabelColor = Turquoise,
-                        unfocusedLabelColor = Silver,
-
-                        // The border colors
-                        focusedBorderColor = Turquoise,
-                        unfocusedBorderColor = Silver,
-
-                        // The blinking cursor
-                        cursorColor = Turquoise,
-
-                        // Ensure the background of the text field itself is transparent
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent
-                    )
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = { if (confCode.isNotBlank()) currentActiveCode = confCode.trim() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Turquoise),
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Join Conference", color = NavyBlue, fontWeight = FontWeight.Bold)
-                }
+        // 1. Header with Switch Code button
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text("Events", color = Silver, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text("Code: $confCode", color = Turquoise, fontSize = 12.sp)
             }
-        } else
-        {
-          Row(
-              modifier = Modifier.fillMaxWidth().padding(16.dp),
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.SpaceBetween
-          )
-          {
-              Column {
-                  Text("Events", color = Silver, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                  Text("Code: $currentActiveCode", color = Turquoise, fontSize = 12.sp)
-              }
-              TextButton(onClick = { currentActiveCode = null }) {
-                  Text("Switch Code", color = ActionOrange)
-              }
-          }
-            if (isLoading)
-            {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center)
-                {
-                    CircularProgressIndicator(color = Turquoise)
-                }
-            }
-            else if (events.isEmpty())
-            {
-                Text(text = "No Events were found for this code", color = Silver, modifier = Modifier.padding(top = 8.dp))
-            }
-            else
-            {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp))
-                {
-                    items(events){event ->
-                        EventCard(
-                            event = event,
-                            onClick = {onEventClick(event)},
-                            NavyBlue = NavyBlue,
-                            Silver = Silver,
-                            ActionOrange = ActionOrange,
-                            Turquoise = Turquoise
-                        )
-                    }
-                }
+            TextButton(onClick = onSwitchCode) {
+                Text("Switch Code", color = ActionOrange)
             }
         }
-        // Error message (Shared for both states)
+
+        // 2. Error Message
         errorMessage?.let { message ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -195,6 +104,42 @@ fun EventListScreen(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF4A1A1A))
             ) {
                 Text(text = message, color = Color.Red, modifier = Modifier.padding(16.dp))
+            }
+        }
+
+        // 3. Loading or List Content
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Turquoise)
+            }
+        } else if (errorMessage != null) {
+            // It's good to handle the error state specifically here
+            // if you didn't show the error card above.
+            Text(text = errorMessage ?: "Unknown Error", color = Color.Red)
+        } else if (events.isEmpty()) {
+            // This now only shows if loading is FALSE and there's no error
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "No Events found for \"$confCode\"",
+                    color = Silver,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(events) { event ->
+                    EventCard(
+                        event = event,
+                        onClick = { onEventClick(event) },
+                        NavyBlue = NavyBlue,
+                        Silver = Silver,
+                        ActionOrange = ActionOrange,
+                        Turquoise = Turquoise
+                    )
+                }
             }
         }
     }

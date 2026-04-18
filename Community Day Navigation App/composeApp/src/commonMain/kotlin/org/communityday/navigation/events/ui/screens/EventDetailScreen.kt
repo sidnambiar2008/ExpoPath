@@ -24,6 +24,8 @@ import communitydaynavigationapp.composeapp.generated.resources.ic_map
 import communitydaynavigationapp.composeapp.generated.resources.ic_meeting_room
 import communitydaynavigationapp.composeapp.generated.resources.ic_person
 import communitydaynavigationapp.composeapp.generated.resources.ic_schedule
+import org.communityday.navigation.events.mapDirectory.openMap
+import androidx.compose.runtime.CompositionLocalProvider
 
 @Composable
 fun EventDetailScreen(
@@ -31,6 +33,9 @@ fun EventDetailScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+
+    val context: Any? = null
+
     val NavyBlue = Color(0xFF000033)
     val Silver = Color(0xFFC0C0C0)
     val ActionOrange = Color(0xFFFF8C00)
@@ -163,7 +168,14 @@ fun EventDetailScreen(
             // Action Button
             item {
                 Button(
-                    onClick = { /* TODO: Handle registration/map navigation */ },
+                    onClick = {
+                        openMap(
+                            lat = event.latitude,
+                            lon = event.longitude,
+                            label = event.title,
+                            context = context
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = ActionOrange

@@ -30,7 +30,9 @@ fun WelcomeScreenPreview() {
 @Composable
 fun EventListScreenPreview() {
     EventListScreen(
-        onEventClick = {}
+        confCode = "PREVIEW123", // A dummy conference code
+        onEventClick = { event -> },
+        onSwitchCode = {}
     )
 }
 
