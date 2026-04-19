@@ -1,9 +1,6 @@
 package org.communityday.navigation.events
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,16 +28,20 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-//import androidx.activity.compose.BackHandler
 import communitydaynavigationapp.composeapp.generated.resources.Res
 import communitydaynavigationapp.composeapp.generated.resources.ic_schedule
 import communitydaynavigationapp.composeapp.generated.resources.ic_map
 import communitydaynavigationapp.composeapp.generated.resources.ic_person
 import communitydaynavigationapp.composeapp.generated.resources.ic_store
 import communitydaynavigationapp.composeapp.generated.resources.ic_settings
+import org.communityday.navigation.events.data.AuthRepository
 import org.communityday.navigation.events.data.Booth
+import org.communityday.navigation.events.data.EventRepository
+import org.communityday.navigation.events.ui.screens.AddConferenceScreen
+import org.communityday.navigation.events.ui.screens.AdminDashboardScreen
 import org.communityday.navigation.events.ui.screens.BoothDetailScreen
 import org.communityday.navigation.events.ui.screens.BoothListScreen
+import org.communityday.navigation.events.ui.screens.LoginScreen
 import org.communityday.navigation.events.ui.screens.SettingsScreen
 
 sealed interface Screen {
@@ -58,8 +59,10 @@ sealed interface Screen {
     @Serializable data object JoinConference : Screen
     @Serializable data class EventDetail(val event: Event) : Screen
     @Serializable data object Settings: Screen
+    @Serializable data object AddConference: Screen
+    @Serializable data class AdminDashboard(val confId: String): Screen
+    @Serializable data object Login: Screen
 }
-
 
 @Composable
 fun BottomNavigationBar(
@@ -138,6 +141,8 @@ fun App() {
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Welcome) }
     var isJoined by remember {mutableStateOf(false)}
     var activeCode by remember { mutableStateOf("") }
+    val repository = remember { EventRepository() }
+    val authRepo = remember { AuthRepository() }
 
     MaterialTheme {
         // 3. Logic to hide the bar on specific screens
@@ -169,7 +174,7 @@ fun App() {
                 when (currentScreen) {
                     is Screen.Welcome -> WelcomeScreen(
                         onGetStarted = {
-                            currentScreen = Screen.JoinConference },
+                            currentScreen = Screen.Login},
                         NavyBlue = NavyBlue,
                         Silver = Silver,
                         ActionOrange = ActionOrange,
@@ -232,6 +237,30 @@ fun App() {
                         EventDetailScreen(
                             event = event,
                             onBackClick = { currentScreen = Screen.EventList }
+                        )
+                    }
+                    is Screen.Login -> {
+                        LoginScreen(
+                            authRepo = authRepo,
+                            onLoginSuccess = { currentScreen = Screen.AddConference }
+                        )
+                    }
+                    is Screen.AddConference -> {
+                        AddConferenceScreen(
+                            repository = repository,
+                            onConferenceCreated = { newId ->
+                                currentScreen = Screen.AdminDashboard(newId)
+                            },
+                            onBack = { currentScreen = Screen.Welcome }
+                        )
+                    }
+
+                    is Screen.AdminDashboard -> {
+                        val id = (currentScreen as Screen.AdminDashboard).confId
+                        AdminDashboardScreen(
+                            confId = id,
+                            repository = repository,
+                            onBack = { currentScreen = Screen.Welcome }
                         )
                     }
                 }

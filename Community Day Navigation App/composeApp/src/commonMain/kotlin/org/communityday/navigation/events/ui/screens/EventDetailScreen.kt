@@ -161,7 +161,16 @@ fun EventDetailScreen(
             // Registration info if capacity is set
             event.capacity?.let { capacity ->
                 item {
-                    RegistrationCard(event, capacity, Silver, ActionOrange)
+                    RegistrationCard(
+                        event = event,
+                        capacity = capacity,
+                        backgroundColor = Silver,
+                        iconTint = ActionOrange,
+                        onRegisterClick = {
+                            // TODO: Add your registration logic here later!
+                            println("Join clicked for ${event.title}!")
+                        }
+                    )
                 }
             }
             
@@ -339,54 +348,46 @@ private fun TagsRow(
 private fun RegistrationCard(
     event: Event,
     capacity: Int,
-    Silver: Color,
-    ActionOrange: Color
+    backgroundColor: Color,
+    iconTint: Color,
+    onRegisterClick: () -> Unit // New callback
 ) {
     val isFull = event.registeredCount >= capacity
-    val registrationStatus = when {
-        isFull -> "Fully Booked"
-        event.registeredCount == 0 -> "No registrations yet"
-        else -> "${event.registeredCount} of $capacity registered"
-    }
-    
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isFull) Color(0xFF4A1A1A) else Color(0xFF1A4D1A)
         )
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Icon(
+                imageVector = vectorResource(Res.drawable.ic_howtoreg),
+                contentDescription = "Registration Open",
+                tint = iconTint,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Registration Status", fontWeight = FontWeight.Bold, color = Color.White)
                 Text(
-                    text = "Registration Status",
-                    color = Silver,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = registrationStatus,
-                    color = if (isFull) Color.Red else Silver.copy(alpha = 0.9f),
-                    fontSize = 12.sp
+                    text = if (isFull) "Fully Booked" else "${event.registeredCount} / $capacity spots taken",
+                    color = Color.White.copy(alpha = 0.8f)
                 )
             }
 
             if (!isFull) {
-                Icon(
-                    imageVector = vectorResource(Res.drawable.ic_howtoreg),
-                    contentDescription = "Registration Open",
-                    tint = ActionOrange,
-                    modifier = Modifier.size(24.dp)
-                )
+                Button(
+                    onClick = onRegisterClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                    contentPadding = PaddingValues(horizontal = 16.dp)
+                ) {
+                    Text("Join", color = Color(0xFF1A4D1A))
+                }
             }
-
-
         }
     }
 }
