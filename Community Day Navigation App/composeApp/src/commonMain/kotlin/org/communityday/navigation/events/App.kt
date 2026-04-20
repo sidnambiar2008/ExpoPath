@@ -42,6 +42,8 @@ import org.communityday.navigation.events.ui.screens.AdminDashboardScreen
 import org.communityday.navigation.events.ui.screens.BoothDetailScreen
 import org.communityday.navigation.events.ui.screens.BoothListScreen
 import org.communityday.navigation.events.ui.screens.LoginScreen
+import org.communityday.navigation.events.ui.screens.ManageMyConferencesScreen
+import org.communityday.navigation.events.ui.screens.ProfileScreen
 import org.communityday.navigation.events.ui.screens.SettingsScreen
 
 sealed interface Screen {
@@ -62,6 +64,7 @@ sealed interface Screen {
     @Serializable data object AddConference: Screen
     @Serializable data class AdminDashboard(val confId: String): Screen
     @Serializable data object Login: Screen
+    @Serializable data object ManageMyConference: Screen
 }
 
 @Composable
@@ -146,10 +149,13 @@ fun App() {
 
     MaterialTheme {
         // 3. Logic to hide the bar on specific screens
-        val showBottomBar = isJoined &&
-                currentScreen !is Screen.Welcome &&
-                currentScreen !is Screen.EventDetail &&
-                currentScreen !is Screen.JoinConference
+        val showBottomBar = when (currentScreen) {
+            is Screen.Welcome,
+            is Screen.Login,
+            is Screen.JoinConference,
+            is Screen.AddConference -> false // Hide on entry/setup screens
+            else -> true // Show on everything else (EventList, AdminDashboard, etc.)
+        }
 
        // BackHandler(enabled = currentScreen !is Screen.Welcome && currentScreen !is Screen.EventList) {
             // If they are in a Detail screen or another tab, send them back to the Event List
@@ -171,16 +177,18 @@ fun App() {
                 .fillMaxSize()
                 .padding(paddingValues) // Respects the space taken by the bottom bar
             ) {
-                when (currentScreen) {
+                when (val screen = currentScreen) {
                     is Screen.Welcome -> WelcomeScreen(
                         onGetStarted = {
-                            currentScreen = Screen.Login},
+                            currentScreen = if (isJoined) Screen.EventList else Screen.JoinConference},
                         NavyBlue = NavyBlue,
                         Silver = Silver,
                         ActionOrange = ActionOrange,
                         Turquoise = Turquoise,
+                        onAdminLogin = {
+                            currentScreen = Screen.Login
+                        }
                     )
-
                     is Screen.JoinConference -> JoinConferenceScreen(
                         NavyBlue = NavyBlue,
                         Silver = Silver,
@@ -219,9 +227,20 @@ fun App() {
                         }
                     }
                     is Screen.Profile -> {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Profile Screen Coming Soon")
-                        }
+                        ProfileScreen(
+                            repository = repository,
+                            Turquoise = Turquoise,
+                            onNavigateToManageList = {currentScreen = Screen.ManageMyConference})
+                    }
+                    is Screen.ManageMyConference -> {
+                        ManageMyConferencesScreen(
+                            repository = repository,
+                            onConferenceSelected = { id ->
+                                currentScreen = Screen.AdminDashboard(id)
+                            },
+                            onBack = { currentScreen = Screen.Profile },
+                            Turquoise = Turquoise
+                        )
                     }
 
                     is Screen.Settings -> SettingsScreen(
@@ -256,9 +275,8 @@ fun App() {
                     }
 
                     is Screen.AdminDashboard -> {
-                        val id = (currentScreen as Screen.AdminDashboard).confId
                         AdminDashboardScreen(
-                            confId = id,
+                            confId = screen.confId, // Use 'screen' directly
                             repository = repository,
                             onBack = { currentScreen = Screen.Welcome }
                         )
@@ -272,6 +290,7 @@ fun App() {
 @Composable
 fun WelcomeScreen(
     onGetStarted: () -> Unit,
+    onAdminLogin: () -> Unit,
     NavyBlue: Color,
     Silver: Color,
     ActionOrange: Color,
@@ -294,7 +313,7 @@ fun WelcomeScreen(
                 modifier = Modifier.size(120.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Logo", color = androidx.compose.ui.graphics.Color.White)
+                Text("Logo", color = Color.White)
             }
         }
 
@@ -303,17 +322,11 @@ fun WelcomeScreen(
         // Title
         AnimatedVisibility(showContent) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-               // Text(
-                 //   text = "Community Day",
-                 //   color = Silver,
-                 //   fontSize = 32.sp,
-                 //   fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-               // )
                 Text(
                     text = "Navigation App",
                     color = Turquoise,
                     fontSize = 24.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
@@ -335,21 +348,44 @@ fun WelcomeScreen(
 
         // Get Started Button
         AnimatedVisibility(showContent) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp) // This handles the gap between them
+            ){
             Button(
                 onClick = onGetStarted,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                colors = ButtonDefaults.buttonColors(
                     containerColor = ActionOrange
                 )
             ) {
                 Text(
                     text = "Get Started",
-                    color = androidx.compose.ui.graphics.Color.White,
+                    color = Color.White,
                     fontSize = 18.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    fontWeight = FontWeight.Bold
                 )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onAdminLogin,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = ActionOrange
+                )
+            ) {
+                Text(
+                    text = "Login To Create a Conference or Community Event",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                }
             }
         }
 

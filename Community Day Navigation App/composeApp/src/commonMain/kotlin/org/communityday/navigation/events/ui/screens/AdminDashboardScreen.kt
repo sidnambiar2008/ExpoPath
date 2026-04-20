@@ -1,6 +1,7 @@
 package org.communityday.navigation.events.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -8,6 +9,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.communityday.navigation.events.data.EventRepository
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.lazy.items // 👈 This is the one you need
+import androidx.compose.ui.graphics.Color
+import communitydaynavigationapp.composeapp.generated.resources.Res
+import communitydaynavigationapp.composeapp.generated.resources.ic_schedule
+import org.jetbrains.compose.resources.vectorResource
+import communitydaynavigationapp.composeapp.generated.resources.ic_delete
 
 @Composable
 fun AdminDashboardScreen(
@@ -15,66 +24,94 @@ fun AdminDashboardScreen(
     repository: EventRepository,
     onBack: () -> Unit
 ) {
+    // State for tracking which item we are editing
+    var editingEvent by remember { mutableStateOf<org.communityday.navigation.events.data.Event?>(null) }
+    var editingBooth by remember { mutableStateOf<org.communityday.navigation.events.data.Booth?>(null) }
+
     var showEventDialog by remember { mutableStateOf(false) }
     var showBoothDialog by remember { mutableStateOf(false) }
 
+    // Fetch the data
+    val events by repository.getEventsStream(confId).collectAsState(initial = emptyList())
+    val booths by repository.getBoothsStream(confId).collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
+
+
     Scaffold { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            // Header Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            LazyColumn(
+                modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "Managing: $confId",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                // 1. HEADER & BUTTONS
+                item {
+                    Text("Managing: $confId", style = MaterialTheme.typography.headlineSmall)
+                    // ... (Your Buttons stay here)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                }
+
+                // 2. EVENTS SECTION
+                item { Text("Events", style = MaterialTheme.typography.titleLarge) }
+
+                if (events.isEmpty()) {
+                    item { Text("No events added yet.", color = Color.Gray) }
+                } else {
+                    items(events) { event ->
+                        AdminCard(
+                            title = event.title,
+                            onClick = { editingEvent = event; showEventDialog = true },
+                            onDelete = { scope.launch { repository.deleteEvent(confId, event.id) } }
+                        )
+                    }
+                }
+
+                // 3. BOOTHS SECTION
+                item {
+                    Spacer(Modifier.height(16.dp))
+                    Text("Booths", style = MaterialTheme.typography.titleLarge)
+                }
+
+                if (booths.isEmpty()) {
+                    item { Text("No booths added yet.", color = Color.Gray) }
+                } else {
+                    items(booths) { booth ->
+                        AdminCard(
+                            title = booth.name,
+                            onClick = { editingBooth = booth; showBoothDialog = true },
+                            onDelete = { scope.launch { repository.deleteBooth(confId, booth.id) } }
+                        )
+                    }
+                }
+                item {
+                    Spacer(Modifier.height(24.dp))
+                    TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                        Text("Exit Dashboard")
+                    }
+                }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-            Text("Conference Dashboard", style = MaterialTheme.typography.titleMedium)
 
-            Spacer(Modifier.height(20.dp))
 
-            Button(
-                onClick = { showEventDialog = true }, // Opens our upcoming dialog
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Add New Event")
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            Button(
-                onClick = { showBoothDialog = true }, // Opens our upcoming dialog
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary
-                )
-            ) {
-                Text("Add New Booth")
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            TextButton(
-                onClick = onBack,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            ) {
-                Text("Exit Dashboard")
-            }
+        // Dialogs
+        if (showEventDialog) {
+            AddEventDialog(
+                confId = confId,
+                repository = repository,
+                initialEvent = editingEvent, // 👈 Pass the item we clicked
+                onDismiss = { showEventDialog = false },
+                onSuccess = { showEventDialog = false }
+            )
         }
-    }
-    // This is where we will "call" the dialogs once we build them
-    if (showEventDialog) {
-        // AddEventDialog(onDismiss = { showEventDialog = false }, confId = confId)
+
+        if (showBoothDialog) {
+            AddBoothDialog(
+                confId = confId,
+                repository = repository,
+                initialBooth = editingBooth, // 👈 Add similar logic to Booth Dialog
+                onDismiss = { showBoothDialog = false },
+                onSuccess = { showBoothDialog = false }
+            )
+        }
     }
 }
 
@@ -82,21 +119,24 @@ fun AdminDashboardScreen(
 fun AddEventDialog(
     confId: String,
     repository: EventRepository,
+    initialEvent: org.communityday.navigation.events.data.Event? = null, // 👈 Added this
     onDismiss: () -> Unit,
     onSuccess: () -> Unit
 ) {
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var startTime by remember { mutableStateOf("") } // Updated
-    var endTime by remember { mutableStateOf("") }   // Updated
+
+    var title by remember(initialEvent) { mutableStateOf(initialEvent?.title ?: "") }
+    var description by remember(initialEvent) { mutableStateOf(initialEvent?.description ?: "") }
+    var startTime by remember(initialEvent) { mutableStateOf(initialEvent?.startTime ?: "") }
+    var endTime by remember(initialEvent) { mutableStateOf(initialEvent?.endTime ?: "") }
+    var latText by remember(initialEvent) { mutableStateOf(initialEvent?.latitude?.toString() ?: "") }
+    var lonText by remember(initialEvent) { mutableStateOf(initialEvent?.longitude?.toString() ?: "") }
+
     val scope = rememberCoroutineScope()
     var isSaving by remember { mutableStateOf(false) }
-    var latText by remember { mutableStateOf("") }
-    var lonText by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add New Event") },
+        title = { Text(if (initialEvent == null) "Add New Event" else "Edit Event") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -153,24 +193,26 @@ fun AddEventDialog(
                 onClick = {
                     scope.launch {
                         isSaving = true
-                        // Ensure these names match your Event data class exactly!
-                        val newEvent = org.communityday.navigation.events.data.Event(
+                        val eventData = org.communityday.navigation.events.data.Event(
+                            id = initialEvent?.id ?: "", // Keep ID if it exists
                             title = title,
                             description = description,
                             startTime = startTime,
                             endTime = endTime,
                             latitude = latText.toDoubleOrNull() ?: 0.0,
-                            longitude = lonText.toDoubleOrNull() ?: 0.0
+                            longitude = lonText.toDoubleOrNull() ?: 0.0,
+                            sortOrder = 1
                         )
-                        val result = repository.addEvent(confId, newEvent)
+
+                        // Switch between add and update
+                        val result = if (initialEvent == null) {
+                            repository.addEvent(confId, eventData)
+                        } else {
+                            repository.updateEvent(confId, eventData) // 👈 Use the update function we wrote
+                        }
+
                         isSaving = false
-                        if (result.isSuccess) {
-                            onSuccess()
-                        }
-                        else
-                        {
-                            isSaving = false
-                        }
+                        if (result.isSuccess) onSuccess()
                     }
                 }
             ) {
@@ -188,19 +230,21 @@ fun AddEventDialog(
 fun AddBoothDialog(
     confId: String,
     repository: EventRepository,
+    initialBooth: org.communityday.navigation.events.data.Booth? = null, // 👈 Added this
     onDismiss: () -> Unit,
     onSuccess: () -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var latText by remember { mutableStateOf("") }
-    var lonText by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
+    var name by remember(initialBooth) { mutableStateOf(initialBooth?.name ?: "") }
+    var latText by remember(initialBooth) { mutableStateOf(initialBooth?.latitude?.toString() ?: "") }
+    var lonText by remember(initialBooth) { mutableStateOf(initialBooth?.longitude?.toString() ?: "") }
+    var description by remember(initialBooth) { mutableStateOf(initialBooth?.description?: "")}
     var isSaving by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add New Booth") },
+        title = { Text(if (initialBooth == null) "Add New Booth" else "Edit Booth") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -244,19 +288,27 @@ fun AddBoothDialog(
                         // Ensure this matches your Booth data class exactly!
                         val newBooth = org.communityday.navigation.events.data.Booth(
                             name = name,
+                            id = initialBooth?.id ?: "",
                             latitude = latText.toDoubleOrNull()?:0.0,
                             longitude = lonText.toDoubleOrNull()?:0.0,
                             description = description
                         )
                         // Make sure your repository has an addBooth function!
-                        val result = repository.addBooth(confId, newBooth)
-                        isSaving = true
+                        val result = if (initialBooth == null) {
+                            repository.addBooth(confId, newBooth)
+                        }
+                        else
+                        {
+                            repository.updateBooth(confId, newBooth)
+                        }
+
+                        isSaving = false
                         if (result.isSuccess) {
                             onSuccess()
                         }
                         else
                         {
-                            isSaving = false
+                            println("Error: ${result.exceptionOrNull()?.message}")
                         }
                     }
                 }
@@ -272,4 +324,32 @@ fun AddBoothDialog(
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+}
+
+@Composable
+fun AdminCard(
+    title: String,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick // Tapping the card = EDIT
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(title, modifier = Modifier.weight(1f))
+
+            IconButton(onClick = onDelete) { // Tapping the trash = DELETE
+                Icon(
+                    imageVector = vectorResource(Res.drawable.ic_delete),
+                    contentDescription = "Time",
+                    tint = Color.Red,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
 }

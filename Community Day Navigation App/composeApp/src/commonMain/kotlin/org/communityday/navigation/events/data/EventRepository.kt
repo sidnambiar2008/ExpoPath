@@ -1,12 +1,15 @@
 package org.communityday.navigation.events.data
 
 import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.catch
 import dev.gitlive.firebase.firestore.DocumentReference
 import dev.gitlive.firebase.firestore.Transaction
+import kotlinx.coroutines.flow.flowOf
+import dev.gitlive.firebase.firestore.where
 
 
 class EventRepository {
@@ -15,17 +18,22 @@ class EventRepository {
     /**
      * Helper to build the dynamic path based on the Conference ID (confId)
      */
-    private fun getCollection(confId: String) = firestore
+    private fun getEventCollection(confId: String) = firestore
         .collection("conferences")
         .document(confId)
         .collection("events")
+
+    private fun getBoothCollection(confId: String) = firestore
+        .collection("conferences")
+        .document(confId)
+        .collection("booths")
 
     /**
      * One-time fetch for a specific conference
      */
     suspend fun getAllEvents(confId: String): Result<List<Event>> {
         return try {
-            val snapshot = getCollection(confId).get()
+            val snapshot = getEventCollection(confId).get()
             val events = snapshot.documents.map { doc ->
                 doc.data<Event>().copy(id = doc.id)
             }
@@ -41,8 +49,8 @@ class EventRepository {
      */
     fun getEventsStream(confId: String): Flow<List<Event>> {
         // We add .orderBy here to tell Firestore how to send the data
-        return getCollection(confId)
-            .orderBy("sortOrder") // 👈 This keeps your schedule in order
+        return getEventCollection(confId)
+            .orderBy("startTime") // 👈 This keeps your schedule in order
             .snapshots
             .map { snapshot ->
                 snapshot.documents.map { doc ->
@@ -55,9 +63,7 @@ class EventRepository {
     }
 
     fun getBoothsStream(confCode: String): Flow<List<Booth>> {
-        return firestore.collection("conferences")
-            .document(confCode)
-            .collection("booths")
+        return getBoothCollection(confCode)
             .snapshots()
             .map { snapshot ->
                 snapshot.documents.map { doc ->
@@ -70,9 +76,27 @@ class EventRepository {
             }
     }
 
+    fun getManagedConferencesStream(): Flow<List<Conference>> {
+        val user = Firebase.auth.currentUser ?: return flowOf(emptyList())
+
+        return firestore.collection("conferences")
+            .where("ownerId", user.uid) // 👈 Direct field-to-value mapping
+            .snapshots
+            .map { snapshot ->
+                snapshot.documents.map { doc ->
+                    doc.data<Conference>().copy(id = doc.id)
+                }
+            }
+            .catch { e ->
+                println("Error fetching owned conferences: ${e.message}")
+                emit(emptyList())
+            }
+    }
+
+
     suspend fun registerForEvent(confId: String, eventId: String): Result<Unit> {
         return try {
-            val eventRef = getCollection(confId).document(eventId)
+            val eventRef = getEventCollection(confId).document(eventId)
 
             // Explicitly telling the IDE this is a Firestore Transaction
             firestore.runTransaction {
@@ -98,12 +122,11 @@ class EventRepository {
 
     suspend fun addEvent(confId: String, newEvent: Event): Result<Unit> {
         return try {
-            val collection = getCollection(confId)
+            val user = Firebase.auth.currentUser ?: throw Exception("Not logged in")
 
-            // We use .add() to let Firestore generate a unique ID,
-            // or .document(customId).set() if you want to prevent duplicates.
-            collection.add(newEvent)
-
+            // Attach the ownerId so the Security Rules allow the 'create'
+            val eventWithSecurity = newEvent.copy(ownerId = user.uid)
+            getEventCollection(confId).add(eventWithSecurity)
             Result.success(Unit)
         } catch (e: Exception) {
             println("Admin Error: Failed to add event: ${e.message}")
@@ -113,12 +136,17 @@ class EventRepository {
 
     suspend fun createConference(conference: Conference): Result<Unit> {
         return try {
-            // This adds a new document to the top-level 'conferences' collection
-            // You can use .add(conference) for a random ID
-            // OR .document(conference.id).set(conference) if you have a specific code (like "NYC2026")
+            val user = Firebase.auth.currentUser ?: throw Exception("Not logged in")
+
+            // We create a copy or a map to ensure the security fields are present
+            val conferenceData = conference.copy(
+                ownerId = user.uid,     // Must match request.auth.uid in rules
+                isPublished = false     // Starts as a draft for "Nonsense" protection
+            )
+
             firestore.collection("conferences")
-                .document(conference.id)
-                .set(conference)
+                .document(conferenceData.id)
+                .set(conferenceData)
 
             Result.success(Unit)
         } catch (e: Exception) {
@@ -127,13 +155,18 @@ class EventRepository {
         }
     }
 
+
     suspend fun addBooth(confId: String, newBooth: Booth): Result<Unit> {
         return try {
-            // 1. Point to the 'booths' sub-collection inside the specific conference
-            firestore.collection("conferences")
-                .document(confId)
-                .collection("booths")
-                .add(newBooth) // 2. Use the booth object passed in
+            // 1. Get the current user
+            val user = Firebase.auth.currentUser ?: throw Exception("Not logged in")
+
+            // 2. Attach the ownerId so the Security Rules are satisfied
+            val boothWithSecurity = newBooth.copy(ownerId = user.uid)
+
+            // 3. Save to the sub-collection
+            getBoothCollection(confId)
+                .add(boothWithSecurity)
 
             Result.success(Unit)
         } catch (e: Exception) {
@@ -141,6 +174,48 @@ class EventRepository {
             Result.failure(e)
         }
     }
+    suspend fun updateEvent(confId: String, event: Event): Result<Unit> {
+        return try {
+            getEventCollection(confId)
+                .document(event.id) // 👈 Target the existing ID
+                .set(event)         // 👈 Overwrite with new data
+            Result.success(Unit)
+        } catch (e: Exception) {
+            println("Update Error: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateBooth(confId: String, booth: Booth): Result<Unit> {
+        return try {
+            getBoothCollection(confId)
+                .document(booth.id)
+                .set(booth)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            println("Update Error: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteEvent(confId: String, eventId: String): Result<Unit> {
+        return try {
+            getEventCollection(confId).document(eventId).delete()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    suspend fun deleteBooth(confId: String, boothId: String): Result<Unit> {
+        return try {
+            getBoothCollection(confId).document(boothId).delete()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            println("Delete Booth Error: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
     /**
      * Your safety net: If Firebase is empty or offline
      */

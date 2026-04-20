@@ -10,6 +10,7 @@ data class Booth(
     val organization: String = "",
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
+    val ownerId: String = "",
     val category: String = "Exhibitor",
     val imageUrl: String? = null)
 {

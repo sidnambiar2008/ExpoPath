@@ -24,10 +24,9 @@ fun LoginScreen(
 ) {
     val scope = rememberCoroutineScope()
 
-    // UI State
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var isSignUp by remember { mutableStateOf(false) } // <--- HERE
+    var isSignUp by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
@@ -36,7 +35,6 @@ fun LoginScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Dynamic Title
         Text(
             text = if (isSignUp) "Create Admin Account" else "Admin Login",
             style = MaterialTheme.typography.headlineMedium
@@ -44,59 +42,73 @@ fun LoginScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        TextField(
+        androidx.compose.material3.OutlinedTextField( // Use Outlined for better Web stability
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading, // Prevent typing while processing
+            singleLine = true
         )
 
         Spacer(Modifier.height(8.dp))
 
-        TextField(
+        androidx.compose.material3.OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading, // Prevent typing while processing
+            singleLine = true
         )
 
-        // Error Display
         errorMessage?.let {
             Text(it, color = Color.Red, modifier = Modifier.padding(vertical = 8.dp))
         }
 
         Spacer(Modifier.height(16.dp))
 
-        // Main Action Button
         Button(
             onClick = {
+                // Focus: Ensure the keyboard/focus is cleared or at least not looping
                 scope.launch {
-                    isLoading = true
-                    errorMessage = null // Reset error on new attempt
+                    try {
+                        isLoading = true
+                        errorMessage = null
 
-                    val result = if (isSignUp) {
-                        authRepo.signUp(email, password)
-                    } else {
-                        authRepo.login(email, password)
-                    }
+                        val result = if (isSignUp) {
+                            authRepo.signUp(email, password)
+                        } else {
+                            authRepo.login(email, password)
+                        }
 
-                    if (result.isSuccess) {
-                        onLoginSuccess()
-                    } else {
-                        errorMessage = result.exceptionOrNull()?.message
+                        if (result.isSuccess) {
+                            onLoginSuccess()
+                        } else {
+                            errorMessage = result.exceptionOrNull()?.message ?: "Unknown Error"
+                        }
+                    } catch (e: Exception) {
+                        errorMessage = e.message
+                    } finally {
+                        isLoading = false // Always reset in finally block
                     }
-                    isLoading = false
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
+            // Only enable if fields aren't empty AND not loading
+            enabled = !isLoading && email.isNotBlank() && password.isNotBlank()
         ) {
             Text(if (isLoading) "Processing..." else if (isSignUp) "Sign Up" else "Login")
         }
 
-        // Toggle Button
-        TextButton(onClick = { isSignUp = !isSignUp }) {
+        TextButton(
+            onClick = {
+                isSignUp = !isSignUp
+                errorMessage = null // Clear errors when switching modes
+            },
+            enabled = !isLoading
+        ) {
             Text(if (isSignUp) "Already have an account? Login" else "Need an account? Sign Up")
         }
     }

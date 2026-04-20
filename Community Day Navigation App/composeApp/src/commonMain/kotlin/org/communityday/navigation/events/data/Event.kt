@@ -18,7 +18,9 @@ data class Event(
     val capacity: Int? = null,
     val registeredCount: Int = 0,
     val imageUrl: String? = null,
-    val tags: List<String> = emptyList()
+    val tags: List<String> = emptyList(),
+    val ownerId: String = "",
+    val sortOrder: Int = 1
 )
 
 @Serializable
