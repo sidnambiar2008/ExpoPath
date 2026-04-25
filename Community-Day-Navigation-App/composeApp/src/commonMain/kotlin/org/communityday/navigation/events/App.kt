@@ -193,7 +193,7 @@ fun App(locationProvider: LocationProvider) {
                     is Screen.Welcome -> WelcomeScreen(
                         onGetStarted = {
                             currentScreen =
-                                if (isJoined) Screen.EventList else Screen.JoinConference //Make SearchConferenceLater
+                                if (isJoined) Screen.EventList else Screen.SearchConference //Make SearchConferenceLater
                         },
                         NavyBlue = NavyBlue,
                         Silver = Silver,

@@ -23,7 +23,7 @@ actual class ConferenceSearcher {
         try {
             // 2. FIX: Use SearchParamsObject (not SearchMethodParams)
             val response = client.searchSingleIndex(
-                indexName = "conferences",
+                indexName = "conferences_index",
                 searchParams = SearchParamsObject(
                     query = query
                 )

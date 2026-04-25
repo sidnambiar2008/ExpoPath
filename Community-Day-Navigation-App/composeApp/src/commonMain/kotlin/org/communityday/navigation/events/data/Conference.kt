@@ -10,11 +10,10 @@ data class Conference(
     val joinCode: String = "",
     val name: String = "",
     val isPublic: Boolean = true,
+    // If these aren't in the Algolia JSON yet, they MUST have default values
     val organization: String = "",
     val description: String = "",
     val isPublished: Boolean = false,
     val ownerId: String = ""
 )
-
-
 

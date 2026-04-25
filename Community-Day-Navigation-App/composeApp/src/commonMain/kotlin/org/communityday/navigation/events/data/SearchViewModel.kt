@@ -1,23 +1,31 @@
 package org.communityday.navigation.events.data
 
-import androidx.compose.runtime.mutableStateOf
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-class SearchViewModel(private val searcher: ConferenceSearcher) {
+// Inherit from ViewModel for better lifecycle management
+class SearchViewModel(private val searcher: ConferenceSearcher) : ViewModel() {
+
     var query by mutableStateOf("")
+        private set // Allow reading but only allow changing via onQueryChange
+
     var results by mutableStateOf<List<Conference>>(emptyList())
+        private set
+
     var isSearching by mutableStateOf(false)
+        private set
 
-    private var searchJob: Job? = null // Track the current search
+    private var searchJob: Job? = null
 
-    fun onQueryChange(newQuery: String, scope: CoroutineScope) {
+    fun onQueryChange(newQuery: String) {
         query = newQuery
 
-        // Cancel the previous search job if it's still running
         searchJob?.cancel()
 
         if (newQuery.length < 3) {
@@ -26,12 +34,17 @@ class SearchViewModel(private val searcher: ConferenceSearcher) {
             return
         }
 
-        searchJob = scope.launch {
+        // Use viewModelScope so search is tied to the VM lifecycle
+        searchJob = viewModelScope.launch {
+            // Add a small delay (300ms) to wait for the user to stop typing
+            delay(300)
+
             isSearching = true
             try {
                 results = searcher.search(newQuery)
             } catch (e: Exception) {
-                // Handle error (e.g., no internet)
+                // Log the error for debugging
+                println("Algolia Search Error: ${e.message}")
                 results = emptyList()
             } finally {
                 isSearching = false

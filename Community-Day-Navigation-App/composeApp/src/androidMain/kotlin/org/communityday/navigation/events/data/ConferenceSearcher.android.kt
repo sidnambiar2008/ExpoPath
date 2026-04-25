@@ -3,9 +3,11 @@ package org.communityday.navigation.events.data
 import com.algolia.client.api.SearchClient
 import com.algolia.client.model.search.SearchParamsObject
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.put
 
 actual class ConferenceSearcher {
     // 1. Plain Strings (No AppID or APIKey wrappers!)
@@ -21,20 +23,19 @@ actual class ConferenceSearcher {
     actual suspend fun search(query: String): List<Conference> {
         return try {
             val response = client.searchSingleIndex(
-                indexName = "conferences",
+                indexName = "conferences_index",
                 searchParams = SearchParamsObject(query = query)
             )
 
             response.hits.map { hit ->
-                // 1. Convert the 'additionalProperties' map to a mutable map
-                val jsonMap = hit.additionalProperties?.toMutableMap() ?: mutableMapOf()
+                val finalJson = buildJsonObject {
+                    // 1. Put all the data fields from Algolia into the object
+                    hit.additionalProperties?.forEach { (key, value) ->
+                        put(key, value)
+                    }
+                    // 2. Explicitly add the objectID so the Conference class can find it
+                    put("objectID", hit.objectID)                }
 
-                // 2. MANUALLY add the objectID into the map
-                // This ensures your @SerialName("objectID") in Conference.kt actually gets a value
-                jsonMap["objectID"] = jsonParser.encodeToJsonElement(hit.objectID)
-
-                // 3. Convert back to JsonObject and decode
-                val finalJson = jsonParser.encodeToJsonElement(jsonMap).jsonObject
                 jsonParser.decodeFromJsonElement<Conference>(finalJson)
             }
         } catch (e: Exception) {

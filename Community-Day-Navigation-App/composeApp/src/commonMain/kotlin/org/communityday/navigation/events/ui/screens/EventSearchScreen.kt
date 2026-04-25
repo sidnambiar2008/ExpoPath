@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import communitydaynavigationapp.composeapp.generated.resources.Res
+import communitydaynavigationapp.composeapp.generated.resources.ic_close
 import communitydaynavigationapp.composeapp.generated.resources.ic_lock
 import communitydaynavigationapp.composeapp.generated.resources.ic_map
 import communitydaynavigationapp.composeapp.generated.resources.ic_rightarrow
@@ -34,14 +35,12 @@ fun EventSearchScreen(
     onNavigateToJoinCode: (String) -> Unit,
     onDirectJoin: (String) -> Unit
 ) {
-    val scope = rememberCoroutineScope()
-
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("Find Your Event", style = MaterialTheme.typography.headlineMedium)
 
         OutlinedTextField(
             value = viewModel.query,
-            onValueChange = { viewModel.onQueryChange(it, scope) },
+            onValueChange = { viewModel.onQueryChange(it) },
             label = { Text("Search by event name...") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true, // Prevents Enter from adding new rows
@@ -49,12 +48,30 @@ fun EventSearchScreen(
                 if (viewModel.isSearching) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 }
+                else if (viewModel.query.isNotEmpty()) {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.ic_close), // Add a close icon to Res
+                        contentDescription = "Clear",
+                        modifier = Modifier.clickable { viewModel.onQueryChange("") }
+                    )
+                }
             }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         LazyColumn {
+            if (viewModel.results.isEmpty() && viewModel.query.length >= 3 && !viewModel.isSearching) {
+                item {
+                    Text(
+                        "No events found for \"${viewModel.query}\"",
+                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+            }
+
             items(viewModel.results) { conference ->
                 ConferenceResultRow(conference) {
                     if (conference.isPublic) {
