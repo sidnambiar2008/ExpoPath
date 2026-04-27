@@ -1,6 +1,7 @@
 package org.communityday.navigation.events
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +27,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import communitydaynavigationapp.composeapp.generated.resources.Res
@@ -34,6 +36,7 @@ import communitydaynavigationapp.composeapp.generated.resources.ic_map
 import communitydaynavigationapp.composeapp.generated.resources.ic_person
 import communitydaynavigationapp.composeapp.generated.resources.ic_store
 import communitydaynavigationapp.composeapp.generated.resources.ic_settings
+import communitydaynavigationapp.composeapp.generated.resources.logo_main
 import org.communityday.navigation.events.data.AuthRepository
 import org.communityday.navigation.events.data.Booth
 import org.communityday.navigation.events.data.ConferenceSearcher
@@ -50,6 +53,7 @@ import org.communityday.navigation.events.ui.screens.SettingsScreen
 import org.communityday.navigation.events.mapDirectory.LocationProvider
 import org.communityday.navigation.events.ui.screens.EventSearchScreen
 import org.communityday.navigation.events.data.SearchViewModel
+import org.communityday.navigation.events.ui.screens.AddScheduleScreen
 
 sealed interface Screen {
     @kotlinx.serialization.Serializable
@@ -64,7 +68,7 @@ sealed interface Screen {
     @Serializable data object Map: Screen
     @Serializable data object Profile: Screen
     @Serializable data object JoinConference : Screen
-    @Serializable data class EventDetail(val event: Event) : Screen
+    @Serializable data class EventDetail(val event: Event, val confId: String) : Screen
     @Serializable data object Settings: Screen
     @Serializable data object AddConference: Screen
     @Serializable data class AdminDashboard(val confId: String): Screen
@@ -74,8 +78,8 @@ sealed interface Screen {
 
     }
     @Serializable data object ManageMyConference: Screen
+    @Serializable data object ScheduleScreen: Screen
 }
-
 @Composable
 fun BottomNavigationBar(
     currentScreen: Screen,
@@ -108,11 +112,11 @@ fun BottomNavigationBar(
 
         // Tab 3: Map
         NavigationBarItem(
-            selected = currentScreen is Screen.Map,
-            onClick = { onTabSelected(Screen.Map) },
-            label = { Text("Map") },
+            selected = currentScreen is Screen.ScheduleScreen,
+            onClick = { onTabSelected(Screen.ScheduleScreen) },
+            label = { Text("Your Schedule") },
             icon = { Icon(
-                painter = painterResource(Res.drawable.ic_map),
+                painter = painterResource(Res.drawable.ic_schedule),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp)
             ) }
@@ -157,6 +161,10 @@ fun App(locationProvider: LocationProvider) {
     val authRepo = remember { AuthRepository() }
     val conferenceSearcher = remember { ConferenceSearcher() }
     val searchViewModel = remember { SearchViewModel(conferenceSearcher) }
+    var pendingCode by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+        repository.ensureAnonymousAuth()
+    }
 
     MaterialTheme {
         // 3. Logic to hide the bar on specific screens
@@ -204,22 +212,33 @@ fun App(locationProvider: LocationProvider) {
                         }
                     )
 
+                    is Screen.ScheduleScreen -> AddScheduleScreen(
+                        confId = activeCode, // Or screen.confId if you stored it there
+                        repository = repository,
+                        onEventClick = {event ->
+                            currentScreen = Screen.EventDetail(event, activeCode)}
+                    )
+
                     is Screen.JoinConference -> JoinConferenceScreen(
                         NavyBlue = NavyBlue,
                         Silver = Silver,
                         Turquoise = Turquoise,
+                        initialCode = pendingCode,
                         onConferenceJoined = { code ->
                             activeCode = code.trim()
                             isJoined = true
                             currentScreen = Screen.EventList
+                            pendingCode = ""
                         },
-                        onBackClick = { currentScreen = Screen.Welcome },
+                        onBackClick = {
+                            pendingCode = ""
+                            currentScreen = Screen.Welcome},
                         ActionOrange = ActionOrange
                     )
 
                     is Screen.EventList -> EventListScreen(
                         confCode = activeCode,
-                        onEventClick = { event -> currentScreen = Screen.EventDetail(event) },
+                        onEventClick = { event -> currentScreen = Screen.EventDetail(event, activeCode) },
                         onSwitchCode = {
                             isJoined = false
                             currentScreen = Screen.JoinConference
@@ -276,7 +295,9 @@ fun App(locationProvider: LocationProvider) {
                     is Screen.EventDetail -> {
                         val event = (currentScreen as Screen.EventDetail).event
                         EventDetailScreen(
+                            confId = activeCode, // Now we have the ID!
                             event = event,
+                            repository = repository,
                             onBackClick = { currentScreen = Screen.EventList }
                         )
                     }
@@ -312,8 +333,17 @@ fun App(locationProvider: LocationProvider) {
                     is Screen.SearchConference -> {
                         EventSearchScreen(
                             viewModel = searchViewModel,
-                            onNavigateToJoinCode = { currentScreen = Screen.JoinConference },
-                            onDirectJoin = { currentScreen = Screen.EventList }
+                            onNavigateToJoinCode = { code ->
+                                // 1. Store the code so the Join Screen can pre-fill it
+                                pendingCode = code
+                                currentScreen = Screen.JoinConference
+                            },
+                            onDirectJoin = { code ->
+                                // 2. Set the code as active so the Event List knows what to load
+                                activeCode = code.trim()
+                                isJoined = true
+                                currentScreen = Screen.EventList
+                            }
                         )
                     }
                 }
@@ -344,12 +374,14 @@ fun WelcomeScreen(
     ) {
         // Logo/Image - using a simple color placeholder for now
         AnimatedVisibility(showContent) {
-            Box(
-                modifier = Modifier.size(120.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Logo", color = Color.White)
-            }
+            Image(
+                painter = painterResource(Res.drawable.logo_main),
+                contentDescription = "App Logo",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .size(120.dp) // Adjust size as needed
+                    .padding(bottom = 16.dp)
+            )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -398,7 +430,7 @@ fun WelcomeScreen(
                 )
             ) {
                 Text(
-                    text = "Join Conference",
+                    text = "Search for your Conference",
                     color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold

@@ -7,11 +7,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.catch
 import dev.gitlive.firebase.firestore.DocumentReference
+import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.Transaction
 import kotlinx.coroutines.flow.flowOf
 import dev.gitlive.firebase.firestore.where
 import org.communityday.navigation.events.utils.convertTimeToMinutes
-
 
 class EventRepository {
     private val firestore = Firebase.firestore
@@ -219,6 +219,88 @@ class EventRepository {
             println("Delete Booth Error: ${e.message}")
             Result.failure(e)
         }
+    }
+    /**
+     * Saves an event ID to the user's private registration list
+     */
+    suspend fun saveEventToUserSchedule(confId: String, eventId: String): Result<Unit> {
+        val user = Firebase.auth.currentUser ?: return Result.failure(Exception("Not logged in"))
+        return try {
+            // Path: users -> {UID} -> registeredEvents -> {eventId}
+            firestore.collection("users")
+                .document(user.uid)
+                .collection("registeredEvents")
+                .document(eventId)
+                .set(mapOf(
+                    "confId" to confId,
+                    "timestamp" to FieldValue.serverTimestamp
+                ))
+            Result.success(Unit)
+        } catch (e: Exception) {
+            println("Error saving to schedule: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun removeFromSchedule(eventId: String) {
+        val user = Firebase.auth.currentUser ?: return
+        firestore.collection("users")
+            .document(user.uid)
+            .collection("registeredEvents")
+            .document(eventId)
+            .delete()
+    }
+    /**
+     * Returns a stream of event IDs the user has registered for
+     */
+    fun getRegisteredEventIds(): Flow<Set<String>> {
+        val user = Firebase.auth.currentUser ?: return flowOf(emptySet())
+        return firestore.collection("users")
+            .document(user.uid)
+            .collection("registeredEvents")
+            .snapshots
+            .map { snapshot -> snapshot.documents.map { it.id }.toSet() }
+    }
+
+    suspend fun ensureAnonymousAuth(): String? {
+        val auth = Firebase.auth
+        return try {
+            val currentUser = auth.currentUser
+            if (currentUser != null) {
+                currentUser.uid
+            } else {
+                // This creates a "Guest" account in the background
+                val result = auth.signInAnonymously()
+                result.user?.uid
+            }
+        } catch (e: Exception) {
+            println("Auth Error: ${e.message}")
+            null
+        }
+    }
+    suspend fun unregisterFromEvent(confId: String, eventId: String): Result<Unit> {
+        val eventRef = firestore.collection("conferences")
+            .document(confId)
+            .collection("events")
+            .document(eventId)
+
+            return try {
+                firestore.runTransaction {
+                    // 'it' represents the Transaction object automatically
+                    val snapshot = get(eventRef)
+
+                    // Use 'snapshot.get("field")' or 'snapshot.getLong("field")'
+                    val currentCount: Int = snapshot.get("registeredCount") ?: 0
+
+                    if (currentCount > 0) {
+                        update(eventRef, mapOf("registeredCount" to (currentCount + 1)))
+                    }
+                }
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+
     }
 
     /**

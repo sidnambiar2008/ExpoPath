@@ -1,5 +1,6 @@
 package org.communityday.navigation.events.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,10 +27,14 @@ import communitydaynavigationapp.composeapp.generated.resources.ic_person
 import communitydaynavigationapp.composeapp.generated.resources.ic_schedule
 import org.communityday.navigation.events.mapDirectory.openMap
 import androidx.compose.runtime.CompositionLocalProvider
+import kotlinx.coroutines.launch
+import org.communityday.navigation.events.data.EventRepository
 
 @Composable
 fun EventDetailScreen(
+    confId: String,          // Pass this in
     event: Event,
+    repository: EventRepository, // Pass this in
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -40,6 +45,11 @@ fun EventDetailScreen(
     val Silver = Color(0xFFC0C0C0)
     val ActionOrange = Color(0xFFFF8C00)
     val Turquoise = Color(0xFF40E0D0)
+    val scope = rememberCoroutineScope()
+
+    // 1. Listen to which events this user is registered for
+    val registeredIds by repository.getRegisteredEventIds().collectAsState(emptySet())
+    val isUserRegistered = registeredIds.contains(event.id)
 
     Column(
         modifier = modifier
@@ -166,9 +176,17 @@ fun EventDetailScreen(
                         capacity = capacity,
                         backgroundColor = Silver,
                         iconTint = ActionOrange,
+                        isAlreadyRegistered = isUserRegistered, // Pass the status
                         onRegisterClick = {
-                            // TODO: Add your registration logic here later!
-                            println("Join clicked for ${event.title}!")
+                            scope.launch {
+                                // 2. Trigger the logic we built
+                                if (isUserRegistered) {
+                                    repository.removeFromSchedule(event.id)
+                                } else {
+                                    repository.registerForEvent(confId, event.id)
+                                    repository.saveEventToUserSchedule(confId, event.id)
+                                }
+                            }
                         }
                     )
                 }
@@ -355,14 +373,19 @@ private fun RegistrationCard(
     capacity: Int,
     backgroundColor: Color,
     iconTint: Color,
-    onRegisterClick: () -> Unit // New callback
+    isAlreadyRegistered: Boolean, // New parameter
+    onRegisterClick: () -> Unit
 ) {
-    val isFull = event.registeredCount >= capacity
+    val isFull = event.registeredCount >= capacity && !isAlreadyRegistered
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (isFull) Color(0xFF4A1A1A) else Color(0xFF1A4D1A)
+            containerColor = when {
+                isAlreadyRegistered -> Color(0xFF1A3A4D) // Blue-ish for joined
+                isFull -> Color(0xFF4A1A1A)             // Red for full
+                else -> Color(0xFF1A4D1A)               // Green for available
+            }
         )
     ) {
         Row(
@@ -371,26 +394,37 @@ private fun RegistrationCard(
         ) {
             Icon(
                 imageVector = vectorResource(Res.drawable.ic_howtoreg),
-                contentDescription = "Registration Open",
+                contentDescription = null,
                 tint = iconTint,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Registration Status", fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    text = if (isAlreadyRegistered) "You're Scheduled!" else "Registration Status",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
                 Text(
                     text = if (isFull) "Fully Booked" else "${event.registeredCount} / $capacity spots taken",
                     color = Color.White.copy(alpha = 0.8f)
                 )
             }
 
-            if (!isFull) {
+            // Only show the button if it's not full, OR if they are already in and want to leave
+            if (!isFull || isAlreadyRegistered) {
                 Button(
                     onClick = onRegisterClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isAlreadyRegistered) Color.Transparent else Color.White
+                    ),
+                    border = if (isAlreadyRegistered) BorderStroke(1.dp, Color.White) else null,
                     contentPadding = PaddingValues(horizontal = 16.dp)
                 ) {
-                    Text("Join", color = Color(0xFF1A4D1A))
+                    Text(
+                        text = if (isAlreadyRegistered) "Leave" else "Join",
+                        color = if (isAlreadyRegistered) Color.White else Color(0xFF1A4D1A)
+                    )
                 }
             }
         }

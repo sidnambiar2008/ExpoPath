@@ -59,12 +59,11 @@ fun EventSearchScreen(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-
-        LazyColumn {
-            if (viewModel.results.isEmpty() && viewModel.query.length >= 3 && !viewModel.isSearching) {
+        LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
+            if (viewModel.results.isEmpty() && !viewModel.isSearching) {
                 item {
                     Text(
-                        "No events found for \"${viewModel.query}\"",
+                        "No upcoming events found for \"${viewModel.query}\"",
                         modifier = Modifier.padding(16.dp).fillMaxWidth(),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray
@@ -75,10 +74,9 @@ fun EventSearchScreen(
             items(viewModel.results) { conference ->
                 ConferenceResultRow(conference) {
                     if (conference.isPublic) {
-                        onDirectJoin(conference.objectID)
+                        onDirectJoin(conference.joinCode)
                     } else {
-                        onNavigateToJoinCode(conference.objectID)
-                    }
+                        onNavigateToJoinCode(conference.joinCode)                    }
                 }
             }
         }
@@ -98,6 +96,11 @@ fun ConferenceResultRow(conference: Conference, onClick: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(conference.name, fontWeight = FontWeight.Bold)
                     //Text(conference.location, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = "Code: ${conference.joinCode}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
             }
 
             if (!conference.isPublic) {
