@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.IconButton
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +26,7 @@ import communitydaynavigationapp.composeapp.generated.resources.Res
 import communitydaynavigationapp.composeapp.generated.resources.ic_back_arrow
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.communityday.navigation.events.data.AuthRepository
 import org.jetbrains.compose.resources.vectorResource
@@ -51,184 +53,229 @@ fun LoginScreen(
     var successMessage by remember { mutableStateOf<String?>(null) }
     var isCheckingAuth by remember { mutableStateOf(true) }
 
+    /*
     LaunchedEffect(Unit) {
-        val currentUser = Firebase.auth.currentUser
-        if (currentUser != null) {
-            // User is already logged in! Skip the login form.
+        // 1. Give Firebase a tiny moment to initialize the token
+        delay(500)
+
+        // 2. Check if a user exists
+        val user = Firebase.auth.currentUser
+        if (user != null) {
+            // 3. User found! Proceed to the dashboard
             onLoginSuccess()
         } else {
-            isCheckingAuth = false // No user found, show the login form
+            // 4. No user, stay on this screen and show the login fields
+            isCheckingAuth = false
         }
     }
+    */
+    LaunchedEffect(Unit) {
+        delay(500)
+        val user = Firebase.auth.currentUser
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Back to Home Page", color = Color.White) }, // Added white text for visibility
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = vectorResource(Res.drawable.ic_back_arrow),
-                            contentDescription = "Back",
-                            tint = ActionOrange
+        // The Logic Gate:
+        // We only skip IF there is a user AND they aren't a guest (they have an email)
+        if (user != null && !user.isAnonymous) {
+            onLoginSuccess()
+        } else {
+            // Otherwise, show the login form so they can sign in as an Admin
+            isCheckingAuth = false
+        }
+    }
+    if (isCheckingAuth) {
+        // Show NOTHING or a Loading Spinner while we check the session
+        // This prevents the login screen from ever appearing if a user is found
+        Box(
+            modifier = Modifier.fillMaxSize().background(NavyBlue),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = Turquoise)
+        }
+    }
+    else {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            "Back to Home Page",
+                            color = Color.White
+                        )
+                    }, // Added white text for visibility
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = vectorResource(Res.drawable.ic_back_arrow),
+                                contentDescription = "Back",
+                                tint = ActionOrange
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = NavyBlue // Match your background
+                    )
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize().background(NavyBlue).padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = if (isSignUp) "Create Admin Account" else "Admin Login",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                androidx.compose.material3.OutlinedTextField( // Use Outlined for better Web stability
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        // BRIGHTEN THE TEXT
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Silver, // Much lighter than the default dark gray
+
+                        // BRIGHTEN THE BORDER
+                        focusedBorderColor = Turquoise,
+                        unfocusedBorderColor = Silver.copy(alpha = 0.7f), // A crisp Silver outline
+
+                        // BRIGHTEN THE LABEL (the hint text)
+                        focusedLabelColor = Turquoise,
+                        unfocusedLabelColor = Silver.copy(alpha = 0.8f),
+
+                        // OPTIONAL: Background color (container)
+                        // If you want the box itself to be slightly lighter than the Navy background:
+                        unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
+                        focusedContainerColor = Color.Transparent
+                    ),
+                    enabled = !isLoading, // Prevent typing while processing
+                    singleLine = true
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                androidx.compose.material3.OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        // BRIGHTEN THE TEXT
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Silver, // Much lighter than the default dark gray
+
+                        // BRIGHTEN THE BORDER
+                        focusedBorderColor = Turquoise,
+                        unfocusedBorderColor = Silver.copy(alpha = 0.7f), // A crisp Silver outline
+
+                        // BRIGHTEN THE LABEL (the hint text)
+                        focusedLabelColor = Turquoise,
+                        unfocusedLabelColor = Silver.copy(alpha = 0.8f),
+
+                        // OPTIONAL: Background color (container)
+                        // If you want the box itself to be slightly lighter than the Navy background:
+                        unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
+                        focusedContainerColor = Color.Transparent
+                    ),
+                    enabled = !isLoading, // Prevent typing while processing
+                    singleLine = true
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = {
+                            if (email.isBlank()) {
+                                errorMessage = "Please enter your email first."
+                            } else {
+                                scope.launch {
+                                    isLoading = true
+                                    val result = authRepo.sendPasswordResetEmail(email)
+                                    isLoading = false
+                                    if (result.isSuccess) {
+                                        successMessage = "Reset email sent! Check your inbox."
+                                        errorMessage = null
+                                    } else {
+                                        errorMessage = result.exceptionOrNull()?.message
+                                            ?: "Failed to send reset email."
+                                    }
+                                }
+                            }
+                        },
+                        enabled = !isLoading
+                    ) {
+                        Text(
+                            "Forgot Password?",
+                            color = Turquoise,
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = NavyBlue // Match your background
-                )
-            )
-        }
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize().background(NavyBlue).padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = if (isSignUp) "Create Admin Account" else "Admin Login",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White
-            )
+                }
 
-            Spacer(Modifier.height(16.dp))
+// Display success message if it exists
+                successMessage?.let {
+                    Text(it, color = Turquoise, modifier = Modifier.padding(vertical = 8.dp))
+                }
 
-            androidx.compose.material3.OutlinedTextField( // Use Outlined for better Web stability
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    // BRIGHTEN THE TEXT
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Silver, // Much lighter than the default dark gray
+                errorMessage?.let {
+                    Text(it, color = Color.Red, modifier = Modifier.padding(vertical = 8.dp))
+                }
 
-                    // BRIGHTEN THE BORDER
-                    focusedBorderColor = Turquoise,
-                    unfocusedBorderColor = Silver.copy(alpha = 0.7f), // A crisp Silver outline
+                Spacer(Modifier.height(16.dp))
 
-                    // BRIGHTEN THE LABEL (the hint text)
-                    focusedLabelColor = Turquoise,
-                    unfocusedLabelColor = Silver.copy(alpha = 0.8f),
-
-                    // OPTIONAL: Background color (container)
-                    // If you want the box itself to be slightly lighter than the Navy background:
-                    unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
-                    focusedContainerColor = Color.Transparent
-                ),
-                enabled = !isLoading, // Prevent typing while processing
-                singleLine = true
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            androidx.compose.material3.OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Password") },
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    // BRIGHTEN THE TEXT
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Silver, // Much lighter than the default dark gray
-
-                    // BRIGHTEN THE BORDER
-                    focusedBorderColor = Turquoise,
-                    unfocusedBorderColor = Silver.copy(alpha = 0.7f), // A crisp Silver outline
-
-                    // BRIGHTEN THE LABEL (the hint text)
-                    focusedLabelColor = Turquoise,
-                    unfocusedLabelColor = Silver.copy(alpha = 0.8f),
-
-                    // OPTIONAL: Background color (container)
-                    // If you want the box itself to be slightly lighter than the Navy background:
-                    unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
-                    focusedContainerColor = Color.Transparent
-                ),
-                enabled = !isLoading, // Prevent typing while processing
-                singleLine = true
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(
+                Button(
                     onClick = {
-                        if (email.isBlank()) {
-                            errorMessage = "Please enter your email first."
-                        } else {
-                            scope.launch {
+                        // Focus: Ensure the keyboard/focus is cleared or at least not looping
+                        scope.launch {
+                            try {
                                 isLoading = true
-                                val result = authRepo.sendPasswordResetEmail(email)
-                                isLoading = false
-                                if (result.isSuccess) {
-                                    successMessage = "Reset email sent! Check your inbox."
-                                    errorMessage = null
+                                errorMessage = null
+
+                                val result = if (isSignUp) {
+                                    authRepo.signUp(email, password)
                                 } else {
-                                    errorMessage = result.exceptionOrNull()?.message ?: "Failed to send reset email."
+                                    authRepo.login(email, password)
                                 }
+
+                                if (result.isSuccess) {
+                                    onLoginSuccess()
+                                } else {
+                                    errorMessage =
+                                        result.exceptionOrNull()?.message ?: "Unknown Error"
+                                }
+                            } catch (e: Exception) {
+                                errorMessage = e.message
+                            } finally {
+                                isLoading = false // Always reset in finally block
                             }
                         }
                     },
+                    modifier = Modifier.fillMaxWidth(),
+                    // Only enable if fields aren't empty AND not loading
+                    enabled = !isLoading && email.isNotBlank() && password.isNotBlank()
+                ) {
+                    Text(if (isLoading) "Processing..." else if (isSignUp) "Sign Up" else "Login")
+                }
+
+                TextButton(
+                    onClick = {
+                        isSignUp = !isSignUp
+                        errorMessage = null // Clear errors when switching modes
+                    },
                     enabled = !isLoading
                 ) {
-                    Text("Forgot Password?", color = Turquoise, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        if (isSignUp) "Already have an account? Login" else "Need an account? Sign Up",
+                        color = Color.White
+                    )
                 }
-            }
-
-// Display success message if it exists
-            successMessage?.let {
-                Text(it, color = Turquoise, modifier = Modifier.padding(vertical = 8.dp))
-            }
-
-            errorMessage?.let {
-                Text(it, color = Color.Red, modifier = Modifier.padding(vertical = 8.dp))
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            Button(
-                onClick = {
-                    // Focus: Ensure the keyboard/focus is cleared or at least not looping
-                    scope.launch {
-                        try {
-                            isLoading = true
-                            errorMessage = null
-
-                            val result = if (isSignUp) {
-                                authRepo.signUp(email, password)
-                            } else {
-                                authRepo.login(email, password)
-                            }
-
-                            if (result.isSuccess) {
-                                onLoginSuccess()
-                            } else {
-                                errorMessage = result.exceptionOrNull()?.message ?: "Unknown Error"
-                            }
-                        } catch (e: Exception) {
-                            errorMessage = e.message
-                        } finally {
-                            isLoading = false // Always reset in finally block
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                // Only enable if fields aren't empty AND not loading
-                enabled = !isLoading && email.isNotBlank() && password.isNotBlank()
-            ) {
-                Text(if (isLoading) "Processing..." else if (isSignUp) "Sign Up" else "Login")
-            }
-
-            TextButton(
-                onClick = {
-                    isSignUp = !isSignUp
-                    errorMessage = null // Clear errors when switching modes
-                },
-                enabled = !isLoading
-            ) {
-                Text(if (isSignUp) "Already have an account? Login" else "Need an account? Sign Up", color = Color.White)
             }
         }
     }

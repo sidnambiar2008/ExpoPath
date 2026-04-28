@@ -6,6 +6,7 @@ import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.communityday.navigation.events.utils.convertTimeToMinutes
@@ -76,23 +77,29 @@ class EventRepository {
                 emit(emptyList()) // Returns an empty list instead of crashing the UI
             }
     }
-
+    @kotlinx.coroutines.ExperimentalCoroutinesApi
     fun getManagedConferencesStream(): Flow<List<Conference>> {
-        val user = Firebase.auth.currentUser ?: return flowOf(emptyList())
-
-        return firestore.collection("conferences")
-            .where { "ownerId" equalTo user.uid } // 👈 The new FilterBuilder syntax
-            .snapshots
-            .map { snapshot ->
-                snapshot.documents.map { doc ->
-                    val conference = doc.data<Conference>()
-                    conference.copy(objectID = doc.id)
-                }
+        // 1. Listen to the Auth state directly
+        return Firebase.auth.authStateChanged.flatMapLatest { user ->
+            if (user == null) {
+                // If no user is logged in yet, return an empty list
+                flowOf(emptyList())
+            } else {
+                // 2. Once the user exists, start the Firestore listener
+                firestore.collection("conferences")
+                    .where { "ownerId" equalTo user.uid }
+                    .snapshots()
+                    .map { snapshot ->
+                        snapshot.documents.map { doc ->
+                            val conference = doc.data<Conference>()
+                            conference.copy(objectID = doc.id)
+                        }
+                    }
             }
-            .catch { e ->
-                println("Error fetching owned conferences: ${e.message}")
-                emit(emptyList())
-            }
+        }.catch { e ->
+            println("Error fetching owned conferences: ${e.message}")
+            emit(emptyList())
+        }
     }
 
 
@@ -307,6 +314,7 @@ class EventRepository {
                     if (currentCount > 0) {
                         update(eventRef, mapOf("registeredCount" to (currentCount - 1)))
                     }
+
                 }
                 Result.success(Unit)
             } catch (e: Exception) {
