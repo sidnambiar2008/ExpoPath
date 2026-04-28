@@ -18,23 +18,34 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.items
 import communitydaynavigationapp.composeapp.generated.resources.Res
+import communitydaynavigationapp.composeapp.generated.resources.ic_back_arrow
 import communitydaynavigationapp.composeapp.generated.resources.ic_edit
 import communitydaynavigationapp.composeapp.generated.resources.ic_manageaccount
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.auth
+import kotlinx.coroutines.launch
 import org.communityday.navigation.events.data.Conference
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.vectorResource
+import kotlinx.coroutines.launch
+
 
 
 @Composable
 fun ProfileScreen(
     repository: EventRepository,
     onNavigateToManageList: () -> Unit, // 👈 New navigation trigger
-    Turquoise: Color
+    Turquoise: Color,
+    onBackClick: () -> Unit,
 ) {
     // We can still keep this check to show a count, or just show the button
     val myConferences by repository.getManagedConferencesStream().collectAsState(initial = emptyList<Conference>())
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("My Account", style = MaterialTheme.typography.headlineMedium)
+    val NavyBlue = Color(0xFF000033)
+    val Silver = Color(0xFFC0C0C0)
+    val scope = rememberCoroutineScope()
+
+    Column(modifier = Modifier.fillMaxSize().background(NavyBlue).padding(16.dp)) {
+        Text("My Account", style = MaterialTheme.typography.headlineMedium, color = Color.White)
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -42,7 +53,7 @@ fun ProfileScreen(
         Surface(
             onClick = onNavigateToManageList, // Takes them to the list screen
             shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
         ) {
             Row(
                 modifier = Modifier
@@ -64,12 +75,15 @@ fun ProfileScreen(
                     Text(
                         text = "Manage My Conferences",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        // CHANGED: Use Turquoise or White instead of Black
+                        color = Turquoise
                     )
                     Text(
                         text = "${myConferences.size} conference(s) created",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
+                        // CHANGED: Use a bright Silver with 80% opacity so it's crisp but secondary
+                        color = Silver.copy(alpha = 0.8f)
                     )
                 }
 
@@ -82,7 +96,11 @@ fun ProfileScreen(
 
         // Optional Logout at bottom
         TextButton(
-            onClick = { /* Handle Logout */ },
+            onClick = { scope.launch {
+                Firebase.auth.signOut()
+                // Navigate the user back to the Welcome/Login screen
+                onBackClick()
+            } },
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
             Text("Log Out", color = Color.Red)
@@ -99,21 +117,32 @@ fun ManageMyConferencesScreen(
     onBack: () -> Unit
 ) {
     val myConferences by repository.getManagedConferencesStream().collectAsState(emptyList())
+    val NavyBlue = Color(0xFF000033)
+    val Silver = Color(0xFFC0C0C0)
+    var conferenceToRename by remember { mutableStateOf<Conference?>(null) }
+    var newNameText by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
 
-    Scaffold(
+
+    Scaffold(containerColor = NavyBlue,
         topBar = {
             TopAppBar(
-                title = { Text("Manage My Conferences") },
+                title = { Text("Manage My Conferences", color = Color.White) },
+
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = vectorResource(Res.drawable.ic_edit),
+                            imageVector = vectorResource(Res.drawable.ic_back_arrow),
                             contentDescription = null,
                             tint = Turquoise,
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                }
+
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = NavyBlue // Match your background
+                )
             )
         }
     ) { padding ->
@@ -127,8 +156,12 @@ fun ManageMyConferencesScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                         onClick = { onConferenceSelected(conf.joinCode) },
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Silver.copy(alpha = 0.1f), // Only 10% brightness
+                            contentColor = Color.White), // Keeps the text readable
+                    )
+                     {
                         Row(
                             modifier = Modifier.padding(20.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -137,6 +170,18 @@ fun ManageMyConferencesScreen(
                                 Text(conf.name, style = MaterialTheme.typography.titleLarge)
                                 Text("ID: ${conf.joinCode}", style = MaterialTheme.typography.bodySmall)
                             }
+
+                            IconButton(onClick = {
+                                conferenceToRename = conf
+                                newNameText = conf.name
+                            }) {
+                                Icon(
+                                    imageVector = vectorResource(Res.drawable.ic_edit),
+                                    contentDescription = "Edit Name",
+                                    tint = Turquoise
+                                )
+                            }
+
                             // The Google "Manage" Icon
                             Icon(
                                 painter = painterResource(Res.drawable.ic_manageaccount),
@@ -147,6 +192,33 @@ fun ManageMyConferencesScreen(
                         }
                     }
                 }
+            }
+
+            if (conferenceToRename != null) {
+                AlertDialog(
+                    onDismissRequest = { conferenceToRename = null },
+                    title = { Text("Rename Conference") },
+                    text = {
+                        OutlinedTextField(
+                            value = newNameText,
+                            onValueChange = { newNameText = it },
+                            label = { Text("New Name") },
+                            singleLine = true
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val code = conferenceToRename?.joinCode ?: ""
+                            scope.launch {
+                                repository.updateConferenceName(code, newNameText)
+                                conferenceToRename = null
+                            }
+                        }) { Text("Save", color = Turquoise) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { conferenceToRename = null }) { Text("Cancel") }
+                    }
+                )
             }
         }
     }

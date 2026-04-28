@@ -2,15 +2,12 @@ package org.communityday.navigation.events.data
 
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
+import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.catch
-import dev.gitlive.firebase.firestore.DocumentReference
-import dev.gitlive.firebase.firestore.FieldValue
-import dev.gitlive.firebase.firestore.Transaction
 import kotlinx.coroutines.flow.flowOf
-import dev.gitlive.firebase.firestore.where
+import kotlinx.coroutines.flow.map
 import org.communityday.navigation.events.utils.convertTimeToMinutes
 
 class EventRepository {
@@ -110,9 +107,9 @@ class EventRepository {
                 val snapshot = get(eventRef)
 
                 val currentCount: Int = snapshot.get("registeredCount") ?: 0
-                val capacity: Int = snapshot.get("capacity") ?: 0
+                val capacity: Int = snapshot.get("capacity") ?: -1
 
-                if (currentCount < capacity) {
+                if (capacity == -1||currentCount < capacity) {
                     update(eventRef, mapOf("registeredCount" to (currentCount + 1)))
                 } else {
                     throw Exception("Event is full!")
@@ -146,11 +143,13 @@ class EventRepository {
             // We create a copy or a map to ensure the security fields are present
             val conferenceData = conference.copy(
                 ownerId = user.uid, // Must match request.auth.uid in rules
-                isPublished = false     // Starts as a draft for "Nonsense" protection
+                isPublished = false,     // Starts as a draft for "Nonsense" protection
+                joinCode = conference.joinCode,
+                objectID = conference.joinCode
             )
 
             firestore.collection("conferences")
-                .document(conferenceData.objectID)
+                .document(conferenceData.joinCode)
                 .set(conferenceData)
 
             Result.success(Unit)
@@ -242,13 +241,30 @@ class EventRepository {
         }
     }
 
-    suspend fun removeFromSchedule(eventId: String) {
-        val user = Firebase.auth.currentUser ?: return
-        firestore.collection("users")
-            .document(user.uid)
-            .collection("registeredEvents")
-            .document(eventId)
-            .delete()
+    suspend fun removeFromSchedule(confId: String, eventId: String): Result<Unit> {
+        val user = Firebase.auth.currentUser ?: return Result.failure(Exception("Not logged in"))
+
+        return try {
+            // 1. Call your unregister logic to decrement the count in the conference
+            val unregisterResult = unregisterFromEvent(confId, eventId)
+            if (unregisterResult.isSuccess) {
+                // 2. Remove from the user's private list
+                firestore.collection("users")
+                    .document(user.uid)
+                    .collection("registeredEvents")
+                    .document(eventId)
+                    .delete()
+
+                Result.success(Unit)
+            }
+            else
+            {
+                Result.failure(unregisterResult.exceptionOrNull() ?: Exception("Unknown Error"))
+            }
+        } catch (e: Exception) {
+            println("Error removing from schedule: ${e.message}")
+            Result.failure(e)
+        }
     }
     /**
      * Returns a stream of event IDs the user has registered for
@@ -279,11 +295,7 @@ class EventRepository {
         }
     }
     suspend fun unregisterFromEvent(confId: String, eventId: String): Result<Unit> {
-        val eventRef = firestore.collection("conferences")
-            .document(confId)
-            .collection("events")
-            .document(eventId)
-
+        val eventRef = getEventCollection(confId).document(eventId)
             return try {
                 firestore.runTransaction {
                     // 'it' represents the Transaction object automatically
@@ -293,14 +305,37 @@ class EventRepository {
                     val currentCount: Int = snapshot.get("registeredCount") ?: 0
 
                     if (currentCount > 0) {
-                        update(eventRef, mapOf("registeredCount" to (currentCount + 1)))
+                        update(eventRef, mapOf("registeredCount" to (currentCount - 1)))
                     }
                 }
                 Result.success(Unit)
             } catch (e: Exception) {
                 Result.failure(e)
             }
+    }
 
+    suspend fun forceResetEventCount(confId: String, eventId: String, newCount: Int): Result<Unit> {
+        return try {
+            // We don't need a transaction here because the Admin's word is law
+            getEventCollection(confId)
+                .document(eventId)
+                .update(mapOf("registeredCount" to newCount))
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateConferenceName(joinCode: String, newName: String): Result<Unit> {
+        return try {
+            firestore.collection("conferences")
+                .document(joinCode)
+                .update(mapOf("name" to newName))
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     /**

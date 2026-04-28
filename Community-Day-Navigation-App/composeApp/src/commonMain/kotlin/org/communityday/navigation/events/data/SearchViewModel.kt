@@ -26,34 +26,6 @@ class SearchViewModel(private val searcher: ConferenceSearcher) : ViewModel() {
         // Call the search function with an empty string to get everything
         onQueryChange("")
     }
-
-    //fun onQueryChange(newQuery: String) {
-     //   query = newQuery
-     //   searchJob?.cancel()
-
-      //  if (newQuery.length < 3) {
-       //     results = emptyList()
-        //    isSearching = false
-        //    return
-        //}
-
-        // Use viewModelScope so search is tied to the VM lifecycle
-        //searchJob = viewModelScope.launch {
-            // Add a small delay (300ms) to wait for the user to stop typing
-         //   delay(300)
-
-            //isSearching = true
-            //try {
-             //   results = searcher.search(newQuery)
-            //} catch (e: Exception) {
-                // Log the error for debugging
-              //  println("Algolia Search Error: ${e.message}")
-               // results = emptyList()
-            //} finally {
-              //  isSearching = false
-            //}
-     //   }
-    //}
     fun onQueryChange(newQuery: String) {
         query = newQuery
         searchJob?.cancel()

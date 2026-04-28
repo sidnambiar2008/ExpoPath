@@ -181,7 +181,7 @@ fun EventDetailScreen(
                             scope.launch {
                                 // 2. Trigger the logic we built
                                 if (isUserRegistered) {
-                                    repository.removeFromSchedule(event.id)
+                                    repository.removeFromSchedule(confId, event.id)
                                 } else {
                                     repository.registerForEvent(confId, event.id)
                                     repository.saveEventToUserSchedule(confId, event.id)

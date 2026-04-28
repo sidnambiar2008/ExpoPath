@@ -1,5 +1,6 @@
 package org.communityday.navigation.events.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
@@ -12,8 +13,10 @@ import org.communityday.navigation.events.data.EventRepository
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.lazy.items //
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import communitydaynavigationapp.composeapp.generated.resources.Res
@@ -35,8 +38,13 @@ fun AdminDashboardScreen(
     confId: String,
     repository: EventRepository,
     onBack: () -> Unit,
-    Turquoise: Color
+    Turquoise: Color,
+    isAttendeeModeActive: Boolean // Add this parameter
+
 ) {
+    val NavyBlue = Color(0xFF000033)
+    val Silver = Color(0xFFC0C0C0)
+
     // State for tracking which item we are editing
     var editingEvent by remember { mutableStateOf<org.communityday.navigation.events.data.Event?>(null) }
     var editingBooth by remember { mutableStateOf<org.communityday.navigation.events.data.Booth?>(null) }
@@ -48,16 +56,18 @@ fun AdminDashboardScreen(
     val events by repository.getEventsStream(confId).collectAsState(initial = emptyList())
     val booths by repository.getBoothsStream(confId).collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
+    var itemToDelete by remember { mutableStateOf<Pair<String, String>?>(null) } // Pair(id, type) where type is "Event" or "Booth"
 
 
-    Scaffold { padding ->
+    Scaffold( containerColor = NavyBlue) { //
+         padding ->
             LazyColumn(
                 modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // 1. HEADER & BUTTONS
                 item {
-                    Text("Edit Conference: $confId", style = MaterialTheme.typography.headlineSmall)
+                    Text("Edit Conference: $confId", style = MaterialTheme.typography.headlineSmall, color = Color.White)
                     // The Buttons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -72,7 +82,7 @@ fun AdminDashboardScreen(
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = Turquoise)
                         ) {
-                            Text("Add Event", color = Color.Black)
+                            Text("Add Event", color = Color.White)
                         }
 
                         // BUTTON TO ADD BOOTH
@@ -84,7 +94,7 @@ fun AdminDashboardScreen(
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = Turquoise)
                         ) {
-                            Text("Add Booth", color = Color.Black)
+                            Text("Add Booth", color = Color.White)
                         }
                     }
                 }
@@ -99,7 +109,8 @@ fun AdminDashboardScreen(
                         AdminCard(
                             title = event.title,
                             onClick = { editingEvent = event; showEventDialog = true },
-                            onDelete = { scope.launch { repository.deleteEvent(confId, event.id) } }
+                            onDelete = { itemToDelete = event.id to "Event" }
+
                         )
                     }
                 }
@@ -117,14 +128,17 @@ fun AdminDashboardScreen(
                         AdminCard(
                             title = booth.name,
                             onClick = { editingBooth = booth; showBoothDialog = true },
-                            onDelete = { scope.launch { repository.deleteBooth(confId, booth.id) } }
+                            onDelete = { itemToDelete = booth.id to "Booth" }
                         )
                     }
                 }
                 item {
                     Spacer(Modifier.height(24.dp))
                     TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-                        Text("Exit Dashboard")
+                        Text(
+                            text = if (isAttendeeModeActive) "Exit to Profile" else "Return to Welcome",
+                            color = Silver.copy(alpha = 0.7f)
+                        )
                     }
                 }
             }
@@ -149,6 +163,38 @@ fun AdminDashboardScreen(
                 onDismiss = { showBoothDialog = false },
                 onSuccess = { showBoothDialog = false },
                 Turquoise = Turquoise
+            )
+        }
+        if (itemToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { itemToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = {
+                    Text("Are you sure you want to delete this ${itemToDelete?.second?.lowercase()}? This action cannot be undone.")
+                },
+                confirmButton = {
+                    Button(
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                        onClick = {
+                            val (id, type) = itemToDelete!!
+                            scope.launch {
+                                if (type == "Event") {
+                                    repository.deleteEvent(confId, id)
+                                } else {
+                                    repository.deleteBooth(confId, id)
+                                }
+                                itemToDelete = null // Close dialog after delete
+                            }
+                        }
+                    ) {
+                        Text("Delete", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { itemToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
             )
         }
     }
@@ -189,6 +235,9 @@ fun AddEventDialog(
         LocationProvider() // We handle context inside the 'actual' logic
     }
     var locationError by remember { mutableStateOf<String?>(null) }
+    var capacityText by remember(initialEvent) {
+        mutableStateOf(initialEvent?.capacity?.toString() ?: "-1")
+    }
 
     LaunchedEffect(locationError) {
         if (locationError != null) {
@@ -201,7 +250,9 @@ fun AddEventDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (initialEvent == null) "Add New Event" else "Edit Event") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp), ) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -262,22 +313,30 @@ fun AddEventDialog(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp) // 2dp is a bit tight for fingers!
+                ) {
                     OutlinedTextField(
                         value = latText,
                         onValueChange = { latText = it },
                         label = { Text("Lat") },
                         modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal) //
-
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
-
                     OutlinedTextField(
                         value = lonText,
                         onValueChange = { lonText = it },
                         label = { Text("Long") },
                         modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal) //
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                    OutlinedTextField(
+                        value = capacityText,
+                        onValueChange = { capacityText = it },
+                        label = { Text("Cap") }, // Shortened label so it doesn't wrap weirdly
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
                 // The GPS Button
@@ -305,6 +364,7 @@ fun AddEventDialog(
                     ),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.height(56.dp) // Matches standard TextField height
+
                 ) {
                     if (isLocating) {
                         CircularProgressIndicator(
@@ -349,10 +409,47 @@ fun AddEventDialog(
                 OutlinedTextField(
                     value = location,
                     onValueChange = { location = it },
-                    label = { Text("Location") },
+                    label = { Text("Location Address") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3
                 )
+
+
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { // Shorter gap here
+                    if (initialEvent != null) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.Red.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = "DANGER ZONE",
+                                color = Color.Red,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Registrations: ${initialEvent.registeredCount}",
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                TextButton(
+                                    onClick = {
+                                        scope.launch {
+                                            repository.forceResetEventCount(confId, initialEvent.id, 0)
+                                            onSuccess()
+                                        }
+                                    }
+                                ) {
+                                    Text("RESET TO 0", color = Color.Red, fontWeight = FontWeight.ExtraBold)
+                                }
+                            }
+                        }
+                    }
+                }
 
                 if (errorMessage != null) {
                     Text(
@@ -371,36 +468,54 @@ fun AddEventDialog(
                 onClick = {
                     val startMin = convertTimeToMinutes(startTime)
                     val endMin = convertTimeToMinutes(endTime)
-
-                    if (endMin <= startMin) {
-                        errorMessage = "End time must be after start time."
-                    } else {
-                        errorMessage = null
-                    scope.launch {
-                        isSaving = true
-                        val eventData = org.communityday.navigation.events.data.Event(
-                            id = initialEvent?.id ?: "", // Keep ID if it exists
-                            title = title,
-                            description = description,
-                            startTime = startTime,
-                            endTime = endTime,
-                            latitude = latText.toDoubleOrNull(),
-                            longitude = lonText.toDoubleOrNull(),
-                            sortOrder = 1
-                        )
-
-                        // Switch between add and update
-                        val result = if (initialEvent == null) {
-                            repository.addEvent(confId, eventData)
-                        } else {
-                            repository.updateEvent(
-                                confId,
-                                eventData
-                            ) // 👈 Use the update function we wrote
+                    when {
+                        title.isBlank() -> {
+                            errorMessage = "Event Title is required."
                         }
 
-                        isSaving = false
-                             if (result.isSuccess) onSuccess()
+                        startTime.isBlank() || endTime.isBlank() -> {
+                            errorMessage = "Please select both Start and End times."
+                        }
+
+                        endMin <= startMin -> {
+                            errorMessage = "End time must be after start time."
+                        }
+
+                        latText.toDoubleOrNull() == null || lonText.toDoubleOrNull() == null -> {
+                            errorMessage = "Valid GPS coordinates are required."
+                        }
+
+                        else -> {
+                            errorMessage = null
+                            scope.launch {
+                                isSaving = true
+                                val eventData = org.communityday.navigation.events.data.Event(
+                                    id = initialEvent?.id ?: "",
+                                    title = title,
+                                    description = description,
+                                    startTime = startTime,
+                                    endTime = endTime,
+                                    latitude = latText.toDoubleOrNull(),
+                                    longitude = lonText.toDoubleOrNull(),
+                                    location = location, // Make sure location is here too
+                                    sortOrder = 1,
+                                    capacity = capacityText.toIntOrNull() ?: -1, // ADD THIS
+                                    registeredCount = initialEvent?.registeredCount ?: 0
+                                )
+
+                                // Switch between add and update
+                                val result = if (initialEvent == null) {
+                                    repository.addEvent(confId, eventData)
+                                } else {
+                                    repository.updateEvent(
+                                        confId,
+                                        eventData
+                                    ) // 👈 Use the update function we wrote
+                                }
+
+                                isSaving = false
+                                if (result.isSuccess) onSuccess()
+                            }
                         }
                     }
                 }
@@ -546,39 +661,42 @@ fun AddBoothDialog(
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3
                 )
+
             }
         },
         confirmButton = {
             Button(
                 enabled = name.isNotBlank() && !isSaving,
                 onClick = {
-                    scope.launch {
-                        isSaving = true
-                        // Ensure this matches your Booth data class exactly!
-                        val newBooth = org.communityday.navigation.events.data.Booth(
-                            name = name,
-                            id = initialBooth?.id ?: "",
-                            latitude = latText.toDoubleOrNull()?:0.0,
-                            longitude = lonText.toDoubleOrNull()?:0.0,
-                            description = description,
-                            location = description
-                        )
-                        // Make sure your repository has an addBooth function!
-                        val result = if (initialBooth == null) {
-                            repository.addBooth(confId, newBooth)
-                        }
-                        else
-                        {
-                            repository.updateBooth(confId, newBooth)
-                        }
+                    if (latText.toDoubleOrNull() == null || lonText.toDoubleOrNull() == null) {
+                        // You'd need to add an errorMessage state to AddBoothDialog too
+                        println("Error: Invalid Coordinates")
+                    }
+                    else {
+                        scope.launch {
+                            isSaving = true
+                            // Ensure this matches your Booth data class exactly!
+                            val newBooth = org.communityday.navigation.events.data.Booth(
+                                name = name,
+                                id = initialBooth?.id ?: "",
+                                latitude = latText.toDoubleOrNull() ?: 0.0,
+                                longitude = lonText.toDoubleOrNull() ?: 0.0,
+                                description = description,
+                                location = description
+                            )
+                            // Make sure your repository has an addBooth function!
+                            val result = if (initialBooth == null) {
+                                repository.addBooth(confId, newBooth)
+                            } else {
+                                repository.updateBooth(confId, newBooth)
+                            }
 
-                        isSaving = false
-                        if (result.isSuccess) {
-                            onSuccess()
-                        }
-                        else
-                        {
-                            println("Error: ${result.exceptionOrNull()?.message}")
+                            isSaving = false
+                            if (result.isSuccess) {
+                                onSuccess()
+                            } else {
+                                println("Error: ${result.exceptionOrNull()?.message}")
+                            }
                         }
                     }
                 }
@@ -602,9 +720,16 @@ fun AdminCard(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val Silver = Color(0xFFC0C0C0) // Define locally if not passed in
     Card(
         modifier = Modifier.fillMaxWidth(),
-        onClick = onClick // Tapping the card = EDIT
+        onClick = onClick, // Tapping the card = EDIT
+                colors = CardDefaults.cardColors(
+                // 10% Silver makes it look deep navy-grey
+                containerColor = Silver.copy(alpha = 0.1f),
+        contentColor = Color.White
+         ),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, Silver.copy(alpha = 0.2f))
     ) {
         Row(
             modifier = Modifier.padding(16.dp),

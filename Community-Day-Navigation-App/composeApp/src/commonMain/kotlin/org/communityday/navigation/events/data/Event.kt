@@ -20,7 +20,8 @@ data class Event(
     val imageUrl: String? = null,
     val tags: List<String> = emptyList(),
     val ownerId: String = "",
-    val sortOrder: Int = 1
+    val sortOrder: Int = 1,
+    val joinCode: String = ""
 )
 
 @Serializable

@@ -162,6 +162,7 @@ fun App(locationProvider: LocationProvider) {
     val conferenceSearcher = remember { ConferenceSearcher() }
     val searchViewModel = remember { SearchViewModel(conferenceSearcher) }
     var pendingCode by remember { mutableStateOf("") }
+    val isAttendeeModeActive = activeCode.trim().isNotEmpty()
     LaunchedEffect(Unit) {
         repository.ensureAnonymousAuth()
     }
@@ -172,8 +173,11 @@ fun App(locationProvider: LocationProvider) {
             is Screen.Welcome,
             is Screen.Login,
             is Screen.JoinConference,
-            is Screen.AddConference -> false // Hide on entry/setup screens
-            else -> true // Show on everything else (EventList, AdminDashboard, etc.)
+            is Screen.SearchConference,
+            is Screen.AddConference,
+            is Screen.ManageMyConference, // Hides bar when looking at your list of owned confs
+            is Screen.AdminDashboard -> false // Hides bar when adding/editing events
+            else -> true
         }
 
        // BackHandler(enabled = currentScreen !is Screen.Welcome && currentScreen !is Screen.EventList) {
@@ -268,7 +272,9 @@ fun App(locationProvider: LocationProvider) {
                         ProfileScreen(
                             repository = repository,
                             Turquoise = Turquoise,
-                            onNavigateToManageList = { currentScreen = Screen.ManageMyConference })
+                            onNavigateToManageList = { currentScreen = Screen.ManageMyConference },
+                            onBackClick = {currentScreen = Screen.Welcome}
+                            )
                     }
 
                     is Screen.ManageMyConference -> {
@@ -305,9 +311,11 @@ fun App(locationProvider: LocationProvider) {
                     is Screen.Login -> {
                         LoginScreen(
                             authRepo = authRepo,
-                            onLoginSuccess = { currentScreen = Screen.AddConference },
+                            onLoginSuccess = {
+                                activeCode = ""
+                                isJoined = false
+                                currentScreen = Screen.AddConference},
                             onBackClick = { currentScreen = Screen.Welcome },
-                            ActionOrange = ActionOrange
                         )
                     }
 
@@ -325,17 +333,26 @@ fun App(locationProvider: LocationProvider) {
                         AdminDashboardScreen(
                             confId = screen.confId, // Use 'screen' directly
                             repository = repository,
-                            onBack = { currentScreen = Screen.Profile },
-                            Turquoise = Turquoise
+                            onBack = {
+                                if (activeCode.isBlank()) {
+                                    // If they aren't "attending" a conference, send them to Welcome
+                                    currentScreen = Screen.Welcome
+                                } else {
+                                    // If they have an active conference, send them back to the Profile
+                                    // where the bottom bar will reappear!
+                                    currentScreen = Screen.Profile
+                                }
+                            },
+                            Turquoise = Turquoise,
+                            isAttendeeModeActive = isAttendeeModeActive
                         )
                     }
 
                     is Screen.SearchConference -> {
                         EventSearchScreen(
                             viewModel = searchViewModel,
-                            onNavigateToJoinCode = { code ->
-                                // 1. Store the code so the Join Screen can pre-fill it
-                                pendingCode = code
+                            onNavigateToJoinCode = {
+                                println("Navigate to Join Code Screen")
                                 currentScreen = Screen.JoinConference
                             },
                             onDirectJoin = { code ->
@@ -343,7 +360,8 @@ fun App(locationProvider: LocationProvider) {
                                 activeCode = code.trim()
                                 isJoined = true
                                 currentScreen = Screen.EventList
-                            }
+                            },
+                            onBackClick = {currentScreen = Screen.Welcome}
                         )
                     }
                 }

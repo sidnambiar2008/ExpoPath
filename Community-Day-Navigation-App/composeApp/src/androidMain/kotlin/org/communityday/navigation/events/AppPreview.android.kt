@@ -62,8 +62,8 @@ fun EventDetailScreenPreview() {
         tags = listOf("android", "kotlin", "compose")
     )
     
-    EventDetailScreen(
-        event = sampleEvent,
-        onBackClick = {}
-    )
+    //EventDetailScreen(
+     //   event = sampleEvent,
+     //   onBackClick = {}
+    //)
 }

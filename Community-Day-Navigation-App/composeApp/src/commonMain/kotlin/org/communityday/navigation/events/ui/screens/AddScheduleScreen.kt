@@ -93,8 +93,7 @@ fun AddScheduleScreen(
                         onRemove = {
                             scope.launch {
                                 // 2. Update both the user schedule and the event's global count
-                                repository.removeFromSchedule(event.id)
-                                repository.unregisterFromEvent(confId, event.id)
+                                repository.removeFromSchedule(confId, event.id)
                             }
                         }
                     )
