@@ -95,15 +95,19 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         // Optional Logout at bottom
-        TextButton(
+        Button(
             onClick = { scope.launch {
                 Firebase.auth.signOut()
                 // Navigate the user back to the Welcome/Login screen
                 onBackClick()
             } },
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Gray.copy(alpha = 0.5f),
+
+            )
         ) {
-            Text("Log Out", color = Color.Red)
+            Text("Log Out", color = Color.Red, fontWeight = FontWeight.Bold)
         }
     }
 }

@@ -92,7 +92,7 @@ fun EventListScreen(
                 Text("Code: $confCode", color = Turquoise, fontSize = 12.sp)
             }
             TextButton(onClick = onSwitchCode) {
-                Text("Switch Code", color = ActionOrange)
+                Text("Change Event", color = ActionOrange)
             }
         }
 

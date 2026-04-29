@@ -52,6 +52,7 @@ fun LoginScreen(
     val ActionOrange = Color(0xFFFF8C00)
     var successMessage by remember { mutableStateOf<String?>(null) }
     var isCheckingAuth by remember { mutableStateOf(true) }
+    var confirmPassword by remember { mutableStateOf("") }
 
     /*
     LaunchedEffect(Unit) {
@@ -186,6 +187,29 @@ fun LoginScreen(
                     enabled = !isLoading, // Prevent typing while processing
                     singleLine = true
                 )
+                if (isSignUp) {
+                    Spacer(Modifier.height(8.dp))
+                    androidx.compose.material3.OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Confirm Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Silver,
+                            focusedBorderColor = Turquoise,
+                            unfocusedBorderColor = Silver.copy(alpha = 0.7f),
+                            focusedLabelColor = Turquoise,
+                            unfocusedLabelColor = Silver.copy(alpha = 0.8f),
+                            unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
+                            focusedContainerColor = Color.Transparent
+                        ),
+                        enabled = !isLoading,
+                        singleLine = true
+                    )
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
@@ -236,9 +260,14 @@ fun LoginScreen(
                     onClick = {
                         // Focus: Ensure the keyboard/focus is cleared or at least not looping
                         scope.launch {
+                            if (isSignUp && password != confirmPassword) {
+                                errorMessage = "Passwords do not match."
+                                return@launch
+                            }
                             try {
                                 isLoading = true
                                 errorMessage = null
+                                successMessage = null
 
                                 val result = if (isSignUp) {
                                     authRepo.signUp(email, password)
@@ -261,7 +290,8 @@ fun LoginScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     // Only enable if fields aren't empty AND not loading
-                    enabled = !isLoading && email.isNotBlank() && password.isNotBlank()
+                    enabled = !isLoading && email.isNotBlank() && password.isNotBlank() &&
+                            (!isSignUp || confirmPassword.isNotBlank())
                 ) {
                     Text(if (isLoading) "Processing..." else if (isSignUp) "Sign Up" else "Login")
                 }
@@ -270,6 +300,11 @@ fun LoginScreen(
                     onClick = {
                         isSignUp = !isSignUp
                         errorMessage = null // Clear errors when switching modes
+                        confirmPassword = "" // Reset this so it's clean for the user
+                        successMessage = null // Clear this too
+                       // email = ""
+                       // password = ""
+                        //confirmPassword = ""
                     },
                     enabled = !isLoading
                 ) {
@@ -296,6 +331,7 @@ fun mapFirebaseError(message: String?): String {
             "Too many failed attempts. Try again later."
         error.contains("invalid-email") ->
             "Please enter a valid email address."
-        else -> "An unexpected error occurred. Please try again."
+        error.contains("ERROR_INVALID_CREDENTIAL") -> "Invalid Username or Password"
+        else -> "An unexpected error occurred. Please try again." + error
     }
 }

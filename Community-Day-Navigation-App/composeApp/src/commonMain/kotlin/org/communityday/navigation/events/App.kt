@@ -114,7 +114,7 @@ fun BottomNavigationBar(
         NavigationBarItem(
             selected = currentScreen is Screen.ScheduleScreen,
             onClick = { onTabSelected(Screen.ScheduleScreen) },
-            label = { Text("Your Schedule") },
+            label = { Text("My Schedule", textAlign = TextAlign.Center) },
             icon = { Icon(
                 painter = painterResource(Res.drawable.ic_schedule),
                 contentDescription = null,
@@ -245,7 +245,7 @@ fun App(locationProvider: LocationProvider) {
                         onEventClick = { event -> currentScreen = Screen.EventDetail(event, activeCode) },
                         onSwitchCode = {
                             isJoined = false
-                            currentScreen = Screen.JoinConference
+                            currentScreen = Screen.SearchConference
 
                         }
                     )
@@ -397,7 +397,7 @@ fun WelcomeScreen(
                 contentDescription = "App Logo",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .size(120.dp) // Adjust size as needed
+                    .size(160.dp) // Adjust size as needed
                     .padding(bottom = 16.dp)
             )
         }
@@ -421,7 +421,7 @@ fun WelcomeScreen(
         // Description
         AnimatedVisibility(showContent) {
             Text(
-                text = "Navigate through conference events,\nconnect with the community,\nand make the most of your day.",
+                text = "Navigate through events\nconnect with the community\nand make the most of your day",
                 color = Silver.copy(alpha = 0.8f),
                 fontSize = 16.sp,
                 lineHeight = 24.sp,
@@ -448,9 +448,9 @@ fun WelcomeScreen(
                 )
             ) {
                 Text(
-                    text = "Search for your Conference",
+                    text = "Join Event",
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -465,9 +465,9 @@ fun WelcomeScreen(
                 )
             ) {
                 Text(
-                    text = "Login To Create a Conference or Community Event",
+                    text = "Create Event",
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
                 }
