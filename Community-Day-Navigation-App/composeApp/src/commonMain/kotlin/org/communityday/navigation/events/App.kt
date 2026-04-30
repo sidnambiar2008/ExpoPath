@@ -23,6 +23,7 @@ import org.communityday.navigation.events.ui.screens.EventListScreen
 import org.communityday.navigation.events.ui.screens.EventDetailScreen
 import kotlinx.serialization.Serializable
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -31,12 +32,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import communitydaynavigationapp.composeapp.generated.resources.Res
+import communitydaynavigationapp.composeapp.generated.resources.ic_home
 import communitydaynavigationapp.composeapp.generated.resources.ic_schedule
 import communitydaynavigationapp.composeapp.generated.resources.ic_map
 import communitydaynavigationapp.composeapp.generated.resources.ic_person
 import communitydaynavigationapp.composeapp.generated.resources.ic_store
 import communitydaynavigationapp.composeapp.generated.resources.ic_settings
 import communitydaynavigationapp.composeapp.generated.resources.logo_main
+import kotlinx.coroutines.launch
 import org.communityday.navigation.events.data.AuthRepository
 import org.communityday.navigation.events.data.Booth
 import org.communityday.navigation.events.data.ConferenceSearcher
@@ -56,9 +59,9 @@ import org.communityday.navigation.events.data.SearchViewModel
 import org.communityday.navigation.events.ui.screens.AddScheduleScreen
 
 sealed interface Screen {
-    @kotlinx.serialization.Serializable
+    @Serializable
     data object Welcome : Screen
-    @kotlinx.serialization.Serializable
+    @Serializable
     data object EventList : Screen
 
     @Serializable data object BoothList: Screen
@@ -163,6 +166,10 @@ fun App(locationProvider: LocationProvider) {
     val searchViewModel = remember { SearchViewModel(conferenceSearcher) }
     var pendingCode by remember { mutableStateOf("") }
     val isAttendeeModeActive = activeCode.trim().isNotEmpty()
+    val scope = rememberCoroutineScope()
+    var isDeletingAccount by remember { mutableStateOf(false) }
+    var showSecurityError by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         repository.ensureAnonymousAuth()
     }
@@ -195,17 +202,17 @@ fun App(locationProvider: LocationProvider) {
             }
 
         ) { paddingValues ->
-            // 4. Content Area
+            // Content Area
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues) // Respects the space taken by the bottom bar
+                    .padding(paddingValues)
             ) {
                 when (val screen = currentScreen) {
                     is Screen.Welcome -> WelcomeScreen(
                         onGetStarted = {
                             currentScreen =
-                                if (isJoined) Screen.EventList else Screen.SearchConference //Make SearchConferenceLater
+                                if (isJoined) Screen.EventList else Screen.SearchConference
                         },
                         NavyBlue = NavyBlue,
                         Silver = Silver,
@@ -217,7 +224,7 @@ fun App(locationProvider: LocationProvider) {
                     )
 
                     is Screen.ScheduleScreen -> AddScheduleScreen(
-                        confId = activeCode, // Or screen.confId if you stored it there
+                        confId = activeCode,
                         repository = repository,
                         onEventClick = {event ->
                             currentScreen = Screen.EventDetail(event, activeCode)}
@@ -245,7 +252,7 @@ fun App(locationProvider: LocationProvider) {
                         onEventClick = { event -> currentScreen = Screen.EventDetail(event, activeCode) },
                         onSwitchCode = {
                             isJoined = false
-                            currentScreen = Screen.SearchConference
+                            currentScreen = Screen.Welcome
 
                         }
                     )
@@ -289,12 +296,27 @@ fun App(locationProvider: LocationProvider) {
                     }
 
                     is Screen.Settings -> SettingsScreen(
-                        onBackClick = {
-                            currentScreen = Screen.EventList
-                        }, // Or return to the previous list
+                        isDeleting = isDeletingAccount,
+                        showSecurityWarning = showSecurityError,
+                        onDismissSecurityWarning = { showSecurityError = false },
                         onDeleteAccount = {
-                            // Handle Firebase account deletion here later
-                            println("Delete requested")
+                            isDeletingAccount = true
+                            scope.launch {
+                                val result = repository.deleteUserCompletely()
+                                isDeletingAccount = false // Stop the spinner
+
+                                if (result.isSuccess) {
+                                    currentScreen = Screen.Welcome
+                                } else {
+                                    val error = result.exceptionOrNull()?.message
+                                    if (error == "SENSITIVE_OPERATION_REQUIRED_RECENT_LOGIN") {
+                                        showSecurityError = true
+                                    } else {
+                                        // Handle other errors (like no internet)
+                                        println("Delete Error: $error")
+                                    }
+                                }
+                            }
                         }
                     )
 
@@ -363,6 +385,26 @@ fun App(locationProvider: LocationProvider) {
                             },
                             onBackClick = {currentScreen = Screen.Welcome}
                         )
+                    }
+                }
+                if (showBottomBar) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd) // This puts it in the corner
+                            //.statusBarsPadding()
+                            .padding(end = 16.dp, top = 8.dp) // This offset from the top right
+                    ) {
+                        IconButton(
+                            onClick = { currentScreen = Screen.Welcome },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_home),
+                                contentDescription = "Home",
+                                tint = Turquoise,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
                 }
             }

@@ -22,14 +22,17 @@ import org.communityday.navigation.events.data.EventCategory
 import org.jetbrains.compose.resources.vectorResource
 import communitydaynavigationapp.composeapp.generated.resources.Res
 import communitydaynavigationapp.composeapp.generated.resources.ic_back_arrow
+import communitydaynavigationapp.composeapp.generated.resources.ic_home
 import communitydaynavigationapp.composeapp.generated.resources.ic_howtoreg
 import communitydaynavigationapp.composeapp.generated.resources.ic_location_on
 import communitydaynavigationapp.composeapp.generated.resources.ic_map
 import communitydaynavigationapp.composeapp.generated.resources.ic_meeting_room
 import communitydaynavigationapp.composeapp.generated.resources.ic_person
 import communitydaynavigationapp.composeapp.generated.resources.ic_schedule
+import communitydaynavigationapp.composeapp.generated.resources.logo_main
 import kotlinx.coroutines.flow.catch
 import org.communityday.navigation.events.data.EventRepository
+import org.jetbrains.compose.resources.painterResource
 
 
 @Composable
@@ -91,9 +94,22 @@ fun EventListScreen(
                 Text("Events", color = Silver, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 Text("Code: $confCode", color = Turquoise, fontSize = 12.sp)
             }
-            TextButton(onClick = onSwitchCode) {
-                Text("Change Event", color = ActionOrange)
+            /*
+            IconButton(
+                onClick = onSwitchCode, // This triggers the lambda in App.kt
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    // Use ic_home if you've added it to commonMain/composeResources/drawable
+                    // Or use the logo_main if you want the app logo to act as home
+                    painter = painterResource(Res.drawable.ic_home),
+                    contentDescription = "Home",
+                    tint = Turquoise, // Match your theme color
+                    modifier = Modifier.size(32.dp)
+                )
             }
+            */
+
         }
 
         // 2. Error Message

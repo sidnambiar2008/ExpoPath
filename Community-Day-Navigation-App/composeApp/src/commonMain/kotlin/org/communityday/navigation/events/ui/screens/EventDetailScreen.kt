@@ -29,6 +29,7 @@ import org.communityday.navigation.events.mapDirectory.openMap
 import androidx.compose.runtime.CompositionLocalProvider
 import kotlinx.coroutines.launch
 import org.communityday.navigation.events.data.EventRepository
+import org.communityday.navigation.events.notifications.NotificationScheduler
 
 @Composable
 fun EventDetailScreen(
@@ -46,6 +47,7 @@ fun EventDetailScreen(
     val ActionOrange = Color(0xFFFF8C00)
     val Turquoise = Color(0xFF40E0D0)
     val scope = rememberCoroutineScope()
+    val scheduler = remember { NotificationScheduler() }
 
     // 1. Listen to which events this user is registered for
     val registeredIds by repository.getRegisteredEventIds().collectAsState(emptySet())
@@ -377,6 +379,8 @@ private fun RegistrationCard(
     onRegisterClick: () -> Unit
 ) {
     val isFull = event.registeredCount >= capacity && !isAlreadyRegistered
+    val scheduler = remember { NotificationScheduler() }
+    val scope = rememberCoroutineScope()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -414,7 +418,31 @@ private fun RegistrationCard(
             // Only show the button if it's not full, OR if they are already in and want to leave
             if (!isFull || isAlreadyRegistered) {
                 Button(
-                    onClick = onRegisterClick,
+                    onClick = {
+                        scope.launch {
+                            if (!isAlreadyRegistered) {
+                                // --- JOINING ---
+                                // Request permission (shows popup on first Join)
+                                scheduler.requestPermissions()
+
+                                // Do your database work
+                                onRegisterClick()
+
+                                // Schedule the alert
+                                scheduler.scheduleEventNotification(
+                                    id = event.id,
+                                    title = event.title,
+                                    startTime = event.startTime
+                                )
+                            } else {
+                                // --- LEAVING ---
+                                onRegisterClick()
+
+                                // Cancel so they don't get alerted for an event they left
+                                scheduler.cancelNotification(event.id)
+                            }
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isAlreadyRegistered) Color.Transparent else Color.White
                     ),

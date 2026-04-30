@@ -19,7 +19,6 @@ import androidx.compose.material3.Card
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
@@ -32,13 +31,13 @@ import androidx.compose.ui.text.font.FontWeight
 import org.communityday.navigation.events.data.Event
 import androidx.compose.runtime.getValue
 import org.communityday.navigation.events.utils.convertTimeToMinutes
-import androidx.compose.foundation.lazy.items // Make sure this import is added
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.sp
 import communitydaynavigationapp.composeapp.generated.resources.Res
-import communitydaynavigationapp.composeapp.generated.resources.ic_back_arrow
 import communitydaynavigationapp.composeapp.generated.resources.ic_delete
 import kotlinx.coroutines.launch
+import org.communityday.navigation.events.notifications.NotificationScheduler
 import org.jetbrains.compose.resources.vectorResource
 
 @Composable
@@ -50,6 +49,7 @@ fun AddScheduleScreen(
     val scope = rememberCoroutineScope()
     val allEvents by repository.getEventsStream(confId).collectAsState(emptyList())
     val registeredIds by repository.getRegisteredEventIds().collectAsState(emptySet())
+    val notificationScheduler = remember { NotificationScheduler() }
 
     // 1. Filter AND Sort: Use your time utility to keep the schedule in order
     val mySchedule = remember(allEvents, registeredIds) {
@@ -94,6 +94,7 @@ fun AddScheduleScreen(
                             scope.launch {
                                 // 2. Update both the user schedule and the event's global count
                                 repository.removeFromSchedule(confId, event.id)
+                                notificationScheduler.cancelNotification(event.id)
                             }
                         }
                     )

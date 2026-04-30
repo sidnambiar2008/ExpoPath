@@ -18,76 +18,110 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.communityday.navigation.events.data.Booth
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import org.communityday.navigation.events.data.EventRepository
 import org.communityday.navigation.events.mapDirectory.openMap
 
 @Composable
 fun SettingsScreen(
-    onBackClick: () -> Unit,
-    onDeleteAccount: () -> Unit
+    onDeleteAccount: () -> Unit,
+    showSecurityWarning: Boolean, // Add this
+    onDismissSecurityWarning: () -> Unit, // Add this,
+    isDeleting: Boolean
 ) {
     val NavyBlue = Color(0xFF000033)
+    val CardBlue = Color(0xFF1A1A4D) // Matches your LegalCard
     val Silver = Color(0xFFC0C0C0)
     val Turquoise = Color(0xFF40E0D0)
     val DangerRed = Color(0xFFCF6679)
+
     var showDeleteConfirmation by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(NavyBlue)
-            .padding(24.dp)
-    ) {
-        Text("App Settings", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // --- Legal Section ---
-        SettingsSectionHeader("Legal", Turquoise)
-        LegalCard(Silver)
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // --- Account Section ---
-        SettingsSectionHeader("Account Management", Turquoise)
-
-        // Delete Account Button (Legal Requirement)
-        Button(
-            onClick = { showDeleteConfirmation = true },
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = DangerRed.copy(alpha = 0.2f))
+    Box(modifier = Modifier.fillMaxSize().background(NavyBlue)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
         ) {
-            Text("Delete Account", color = DangerRed)
-        }
-        if (showDeleteConfirmation) {
-            AlertDialog(
-                onDismissRequest = { showDeleteConfirmation = false },
-                title = { Text("Delete Account?") },
-                text = { Text("This will permanently remove your registration data and any conferences you've created. This cannot be undone.") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showDeleteConfirmation = false
-                            onDeleteAccount() // 👈 Now actually call it
-                        }
-                    ) { Text("Delete Permanently", color = Color.Red) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteConfirmation = false }) { Text("Cancel") }
+            Text("App Settings", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // --- Legal Section ---
+            SettingsSectionHeader("Legal", Turquoise)
+            LegalCard(Silver)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- Account Section ---
+            SettingsSectionHeader("Account Management", Turquoise)
+
+            Button(
+                onClick = { showDeleteConfirmation = true },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                enabled = !isDeleting, // Disable button while deleting
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DangerRed.copy(alpha = 0.2f),
+                    disabledContainerColor = Color.Gray.copy(alpha = 0.1f)
+                )
+            ) {
+                if (isDeleting) {
+                    CircularProgressIndicator(color = DangerRed, modifier = Modifier.size(20.dp))
+                } else {
+                    Text("Delete Account", color = DangerRed)
                 }
-            )
+            }
+
+            if (showDeleteConfirmation) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteConfirmation = false },
+                    containerColor = CardBlue, // Match your theme!
+                    titleContentColor = Color.White,
+                    textContentColor = Silver,
+                    title = { Text("Delete Account?", fontWeight = FontWeight.Bold) },
+                    text = { Text("This will permanently remove your registration data and any conferences you've created. This cannot be undone.") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showDeleteConfirmation = false
+                                onDeleteAccount()
+                            }
+                        ) { Text("Delete Permanently", color = DangerRed, fontWeight = FontWeight.Bold) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteConfirmation = false }) {
+                            Text("Cancel", color = Turquoise)
+                        }
+                    }
+                )
+            }
+            if (showSecurityWarning) {
+                AlertDialog(
+                    onDismissRequest = { onDismissSecurityWarning() },
+                    containerColor = CardBlue,
+                    titleContentColor = Color.White,
+                    textContentColor = Silver,
+                    title = { Text("Security Check Required") },
+                    text = { Text("For your protection, you must have logged in recently to delete your account. Please log out and log back in, then try again.") },
+                    confirmButton = {
+                        TextButton(onClick = { onDismissSecurityWarning() }) {
+                            Text("Got it", color = Turquoise)
+                        }
+                    }
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
-
-        // --- Back Button ---
-        Button(
-            onClick = onBackClick,
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Turquoise)
-        ) {
-            Text("Return", color = NavyBlue, fontWeight = FontWeight.Bold)
+        // Optional: Full screen overlay if you want to block all interactions during delete
+        if (isDeleting) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Turquoise)
+            }
         }
     }
 }
@@ -101,6 +135,10 @@ fun SettingsSectionHeader(text: String, color: Color) {
 @Composable
 fun LegalCard(Silver: Color) {
     val Turquoise = Color(0xFF40E0D0)
+    val uriHandler = LocalUriHandler.current // 1. Grab the handler
+
+    // Replace with your actual GitHub Pages or Repo link
+    val baseUrl = "https://github.com/sidnambiar2008/Community-Day-Navigation-App/blob/main/"
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A4D)),
@@ -112,11 +150,21 @@ fun LegalCard(Silver: Color) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // These should trigger a URI Intent to open your website
-            LegalLink("Privacy Policy", Turquoise) { /* Open URL */ }
-            LegalLink("Terms of Service", Turquoise) { /* Open URL */ }
-            LegalLink("Open Source Licenses", Turquoise) { /* Open List */ }
-            LegalLink("Contact Support", Turquoise) { /* Open Email */ }
+            // 2. Map the buttons to your GitHub files
+            LegalLink("Privacy Policy", Turquoise) {
+                uriHandler.openUri("$baseUrl/PRIVACY.md")
+            }
+            LegalLink("Terms of Service", Turquoise) {
+                uriHandler.openUri("$baseUrl/TERMS.md")
+            }
+            LegalLink("Open Source Licenses", Turquoise) {
+                uriHandler.openUri("$baseUrl/LICENSES.md")
+            }
+
+            // 3. Contact Support (Opens the user's default email app)
+            LegalLink("Contact Support", Turquoise) {
+                uriHandler.openUri("mailto:your-email@usc.edu?subject=ExpoPath%20Support")
+            }
         }
     }
 }

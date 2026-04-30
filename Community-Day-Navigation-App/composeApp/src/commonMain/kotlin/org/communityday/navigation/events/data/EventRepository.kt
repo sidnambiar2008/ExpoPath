@@ -303,7 +303,8 @@ class EventRepository {
     }
     suspend fun unregisterFromEvent(confId: String, eventId: String): Result<Unit> {
         val eventRef = getEventCollection(confId).document(eventId)
-            return try {
+
+        return try {
                 firestore.runTransaction {
                     // 'it' represents the Transaction object automatically
                     val snapshot = get(eventRef)
@@ -314,7 +315,6 @@ class EventRepository {
                     if (currentCount > 0) {
                         update(eventRef, mapOf("registeredCount" to (currentCount - 1)))
                     }
-
                 }
                 Result.success(Unit)
             } catch (e: Exception) {
@@ -346,6 +346,58 @@ class EventRepository {
         }
     }
 
+    suspend fun deleteUserCompletely(): Result<Unit> {
+        val user = Firebase.auth.currentUser ?: return Result.failure(Exception("Not logged in"))
+        val uid = user.uid
+
+        return try {
+            // 1. Clean up Conferences owned by the user
+            val ownedConferences = firestore.collection("conferences")
+                .where { "ownerId" equalTo uid }
+                .get()
+
+            for (confDoc in ownedConferences.documents) {
+                // A. Delete Events sub-collection
+                val events = confDoc.reference.collection("events").get()
+                for (eventDoc in events.documents) {
+                    eventDoc.reference.delete()
+                }
+
+                // B. Delete Booths sub-collection
+                val booths = confDoc.reference.collection("booths").get()
+                for (boothDoc in booths.documents) {
+                    boothDoc.reference.delete()
+                }
+
+                // C. Delete the Conference document
+                confDoc.reference.delete()
+            }
+
+            // 2. Clean up the User's private sub-collections (e.g., registeredEvents)
+            // This ensures the 'users' document is truly empty before deletion
+            val registeredEvents = firestore.collection("users")
+                .document(uid)
+                .collection("registeredEvents")
+                .get()
+
+            for (regDoc in registeredEvents.documents) {
+                regDoc.reference.delete()
+            }
+
+            // 3. Delete the main User document
+            firestore.collection("users").document(uid).delete()
+
+            // 4. Finally, delete the Firebase Auth account
+            // Note: If this fails with "requires-recent-login", the catch block
+            // will handle it and return the failure to your SettingsScreen.
+            user.delete()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            println("Complete Deletion Error: ${e.message}")
+            Result.failure(e)
+        }
+    }
     /**
      * Your safety net: If Firebase is empty or offline
      */

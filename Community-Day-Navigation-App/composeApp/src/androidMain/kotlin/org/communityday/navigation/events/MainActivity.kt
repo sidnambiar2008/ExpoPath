@@ -9,6 +9,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import org.communityday.navigation.events.mapDirectory.AndroidMapConfig
 import org.communityday.navigation.events.mapDirectory.LocationProvider
 import androidx.compose.ui.platform.LocalContext
+import org.communityday.navigation.events.notifications.NotificationScheduler
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -17,6 +18,7 @@ class MainActivity : ComponentActivity() {
 
         // 1. Set the static config so LocationProvider can find it internally
         AndroidMapConfig.context = this
+        NotificationScheduler.context = applicationContext
 
         // 2. Initialize without passing a parameter
         val locationProvider = LocationProvider()

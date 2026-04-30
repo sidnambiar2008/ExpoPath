@@ -136,7 +136,7 @@ fun AdminDashboardScreen(
                     Spacer(Modifier.height(24.dp))
                     TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            text = if (isAttendeeModeActive) "Exit to Profile" else "Return to Welcome",
+                            text = if (isAttendeeModeActive) "Exit to Profile Screen" else "Return to Home Screen",
                             color = Silver.copy(alpha = 0.7f)
                         )
                     }
