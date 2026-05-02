@@ -3,8 +3,8 @@ package org.communityday.navigation.events
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +38,7 @@ import communitydaynavigationapp.composeapp.generated.resources.ic_map
 import communitydaynavigationapp.composeapp.generated.resources.ic_person
 import communitydaynavigationapp.composeapp.generated.resources.ic_store
 import communitydaynavigationapp.composeapp.generated.resources.ic_settings
+import communitydaynavigationapp.composeapp.generated.resources.ic_swapconference
 import communitydaynavigationapp.composeapp.generated.resources.logo_main
 import kotlinx.coroutines.launch
 import org.communityday.navigation.events.data.AuthRepository
@@ -57,6 +58,7 @@ import org.communityday.navigation.events.mapDirectory.LocationProvider
 import org.communityday.navigation.events.ui.screens.EventSearchScreen
 import org.communityday.navigation.events.data.SearchViewModel
 import org.communityday.navigation.events.ui.screens.AddScheduleScreen
+import org.jetbrains.compose.resources.vectorResource
 
 sealed interface Screen {
     @Serializable
@@ -192,6 +194,7 @@ fun App(locationProvider: LocationProvider) {
          //   currentScreen = Screen.EventList
        // }
         Scaffold(
+            containerColor = NavyBlue,
             bottomBar = {
                 if (showBottomBar) {
                     BottomNavigationBar(
@@ -253,7 +256,6 @@ fun App(locationProvider: LocationProvider) {
                         onSwitchCode = {
                             isJoined = false
                             currentScreen = Screen.Welcome
-
                         }
                     )
 
@@ -264,8 +266,10 @@ fun App(locationProvider: LocationProvider) {
 
                     is Screen.BoothDetail -> {
                         val booth = (currentScreen as Screen.BoothDetail).booth
+                        val conference by repository.getConferenceById(activeCode).collectAsState(null)
                         BoothDetailScreen(
                             booth = booth,
+                            conferenceAddress = conference?.address ?: "",
                             onBackClick = { currentScreen = Screen.BoothList })
                     }
 
@@ -280,7 +284,8 @@ fun App(locationProvider: LocationProvider) {
                             repository = repository,
                             Turquoise = Turquoise,
                             onNavigateToManageList = { currentScreen = Screen.ManageMyConference },
-                            onBackClick = {currentScreen = Screen.Welcome}
+                            onBackClick = {currentScreen = Screen.Welcome},
+                            authRepository = authRepo
                             )
                     }
 
@@ -322,10 +327,16 @@ fun App(locationProvider: LocationProvider) {
 
                     is Screen.EventDetail -> {
                         val event = (currentScreen as Screen.EventDetail).event
+                        val confId = (currentScreen as Screen.EventDetail).confId
+
+                        // Collect the conference data to get the building address
+                        val conference by repository.getConferenceById(confId).collectAsState(null)
+
                         EventDetailScreen(
-                            confId = activeCode, // Now we have the ID!
+                            confId = confId,
                             event = event,
                             repository = repository,
+                            conferenceAddress = conference?.address ?: "", // Pass the anchor!
                             onBackClick = { currentScreen = Screen.EventList }
                         )
                     }
@@ -347,7 +358,9 @@ fun App(locationProvider: LocationProvider) {
                             onConferenceCreated = { newId ->
                                 currentScreen = Screen.AdminDashboard(newId)
                             },
-                            onBack = { currentScreen = Screen.Welcome }
+                            onBack = { currentScreen = Screen.Welcome },
+                            onSwitchAccount = { currentScreen = Screen.Login},
+                            authRepository = authRepo
                         )
                     }
 
@@ -390,20 +403,64 @@ fun App(locationProvider: LocationProvider) {
                 if (showBottomBar) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.TopEnd) // This puts it in the corner
-                            //.statusBarsPadding()
-                            .padding(end = 16.dp, top = 8.dp) // This offset from the top right
+                            .align(Alignment.TopEnd)
+                            .padding(end = 16.dp, top = 8.dp)
                     ) {
-                        IconButton(
-                            onClick = { currentScreen = Screen.Welcome },
-                            modifier = Modifier.size(40.dp)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp), // Spaces the two buttons apart
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                painter = painterResource(Res.drawable.ic_home),
-                                contentDescription = "Home",
-                                tint = Turquoise,
-                                modifier = Modifier.size(28.dp)
-                            )
+                            // --- Home Button Group ---
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.clickable { currentScreen = Screen.Welcome }
+                            ) {
+                                IconButton(
+                                    onClick = { currentScreen = Screen.Welcome },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(Res.drawable.ic_home),
+                                        contentDescription = "Home",
+                                        tint = Turquoise,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                                Text(
+                                    text = "Home",
+                                    color = Turquoise,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            // --- Change Event Button Group ---
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.clickable {
+                                    // Change this to whatever screen lets them pick a new code
+                                    currentScreen = Screen.JoinConference
+                                }
+                            ) {
+                                IconButton(
+                                    onClick = { currentScreen = Screen.SearchConference },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        // Make sure you have a swap or settings icon in your resources
+                                        imageVector = vectorResource(Res.drawable.ic_swapconference),
+                                        contentDescription = "Change Event",
+                                        tint = Turquoise,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                                Text(
+                                    text = "Change Event",
+                                    color = Turquoise,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }

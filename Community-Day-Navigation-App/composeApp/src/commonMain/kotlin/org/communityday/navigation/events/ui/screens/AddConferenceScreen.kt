@@ -15,28 +15,34 @@ import androidx.compose.ui.unit.dp
 import communitydaynavigationapp.composeapp.generated.resources.Res
 import communitydaynavigationapp.composeapp.generated.resources.ic_daterange
 import kotlinx.coroutines.launch
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.communityday.navigation.events.data.Conference // Import your Conference model
 import org.communityday.navigation.events.data.EventRepository // Import your Repository
 import org.jetbrains.compose.resources.vectorResource
 import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
+//import kotlin.time.Instant
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.LocalDateTime
+import org.communityday.navigation.events.data.AuthRepository
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class)
 @Composable
 fun AddConferenceScreen(
     repository: EventRepository,
+    authRepository: AuthRepository,
     onConferenceCreated: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onSwitchAccount: () -> Unit
 ) {
     // State variables
     var name by remember { mutableStateOf("") }
     var confId by remember { mutableStateOf("") }
-    var location by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
     var isPublic by remember { mutableStateOf(true) } // Privacy Toggle
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) } // Date State
-
+    var showError by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -44,8 +50,9 @@ fun AddConferenceScreen(
     // Date Formatter Helper (Simple for demo)
     val dateText = selectedDateMillis?.let { millis ->
         val instant = Instant.fromEpochMilliseconds(millis)
-        val date = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-        "${date.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${date.dayOfMonth}, ${date.year}"
+        val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+        val date = localDateTime.date // Extract the date object
+        "${date.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${date.dayOfMonth}, ${date.year}" // dayOfMonth is deprecated and apparently became day
     } ?: "Select Conference Date"
 
     // Colors
@@ -62,7 +69,7 @@ fun AddConferenceScreen(
                 TextButton(onClick = {
                     selectedDateMillis = datePickerState.selectedDateMillis
                     showDatePicker = false
-                }) { Text("OK", color = Turquoise) }
+                }) { Text("OK", color = Color.Black) }
             }
         ) {
             DatePicker(state = datePickerState)
@@ -73,6 +80,27 @@ fun AddConferenceScreen(
         modifier = Modifier.fillMaxSize().background(NavyBlue).padding(24.dp).verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = {
+                scope.launch {
+                    val result = authRepository.performSignOut()
+                    if (result.isSuccess) {
+                        // This is the callback that sends them back to the LoginScreen
+                        onSwitchAccount()
+                    } else {
+                        // Optional: show a snackbar or toast
+                        println("Sign out failed")
+                    }
+                }
+            }) {
+                Text("Switch Account", color = Turquoise.copy(alpha = 0.8f), style = MaterialTheme.typography.labelLarge)
+            }
+        }
+
         Text("Create Conference", style = MaterialTheme.typography.headlineMedium, color = Color.White)
         Spacer(Modifier.height(24.dp))
 
@@ -84,7 +112,7 @@ fun AddConferenceScreen(
         StandardTextField(confId, { confId = it }, if (isPublic) "Conference ID" else "Access Code", Turquoise, Silver)
         Spacer(Modifier.height(12.dp))
 
-        StandardTextField(location, { location = it }, "Location", Turquoise, Silver)
+        StandardTextField(address, { address = it }, "Location (Provide An Address)", Turquoise, Silver)
 
         Spacer(Modifier.height(24.dp))
 
@@ -131,16 +159,25 @@ fun AddConferenceScreen(
         if (isLoading) {
             CircularProgressIndicator(color = Turquoise)
         } else {
+            if (showError) {
+                Text(
+                    text = "Please fill in all fields and select a date.",
+                    color = Color(0xFFFF6B6B),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
             Button(
                 onClick = {
-                    if (name.isNotBlank() && confId.isNotBlank() && selectedDateMillis != null) {
+                    if (name.isNotBlank() && confId.isNotBlank() && selectedDateMillis != null && address.isNotBlank()) {
                         scope.launch {
                             isLoading = true
 
                             val isoDateString = selectedDateMillis?.let { millis ->
                                 val instant = Instant.fromEpochMilliseconds(millis)
                                 val localDateTime = instant.toLocalDateTime(TimeZone.UTC)
-                                localDateTime.date.toString() // "YYYY-MM-DD"
+
+                                localDateTime.date.toString()
                             } ?: ""
 
                             // Pass the new fields to your model
@@ -148,12 +185,16 @@ fun AddConferenceScreen(
                                 joinCode = confId,
                                 name = name,
                                 isPublic = isPublic,
-                                dateString = isoDateString
+                                dateString = isoDateString,
+                                address = address
                             )
                             val result = repository.createConference(newConf)
                             isLoading = false
                             if (result.isSuccess) onConferenceCreated(confId)
                         }
+                    }
+                    else{
+                        showError = true
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -162,7 +203,7 @@ fun AddConferenceScreen(
                 Text("Save and Manage Events", color = NavyBlue, fontWeight = FontWeight.Bold)
             }
         }
-        TextButton(onClick = onBack) { Text("Cancel", color = Color.White) }
+        TextButton(onClick = onBack) { Text("Return to Home Page", color = Color.White) }
     }
 }
 

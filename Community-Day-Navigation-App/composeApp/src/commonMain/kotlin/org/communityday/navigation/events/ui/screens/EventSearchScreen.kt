@@ -49,7 +49,7 @@ fun EventSearchScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar( // Use CenterAligned for the title to be centered
+            CenterAlignedTopAppBar( // The title to be centered
                 title = {
                     Text(
                         text = "Find your Event",
@@ -117,7 +117,7 @@ fun EventSearchScreen(
                 if (viewModel.results.isEmpty() && !viewModel.isSearching) {
                     item {
                         Text(
-                            "No upcoming events found for \"${viewModel.query}\"",
+                            "No upcoming events found for \"${viewModel.query}\".\n\nTry retyping the event name, closing the app, retrying your internet, or turning on your cellular data ",
                             modifier = Modifier.padding(16.dp).fillMaxWidth(),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.Gray

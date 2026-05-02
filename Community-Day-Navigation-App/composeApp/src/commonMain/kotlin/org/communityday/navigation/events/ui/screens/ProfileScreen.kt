@@ -28,14 +28,15 @@ import org.communityday.navigation.events.data.Conference
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.vectorResource
 import kotlinx.coroutines.launch
-
+import org.communityday.navigation.events.data.AuthRepository
 
 
 @Composable
 fun ProfileScreen(
     repository: EventRepository,
-    onNavigateToManageList: () -> Unit, // 👈 New navigation trigger
+    onNavigateToManageList: () -> Unit,
     Turquoise: Color,
+    authRepository: AuthRepository,
     onBackClick: () -> Unit,
 ) {
     // We can still keep this check to show a count, or just show the button
@@ -97,7 +98,7 @@ fun ProfileScreen(
         // Optional Logout at bottom
         Button(
             onClick = { scope.launch {
-                Firebase.auth.signOut()
+                authRepository.performSignOut()
                 // Navigate the user back to the Welcome/Login screen
                 onBackClick()
             } },

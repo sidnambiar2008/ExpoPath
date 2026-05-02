@@ -5,48 +5,50 @@ import platform.UserNotifications.*
 import platform.Foundation.* //
 
 actual class NotificationScheduler actual constructor() {
-    actual fun scheduleEventNotification(id: String, title: String, startTime: String) {
+    actual fun scheduleEventNotification(id: String, title: String, startTime: String, dateString: String,) {
         val center = UNUserNotificationCenter.currentNotificationCenter()
 
         center.getNotificationSettingsWithCompletionHandler { settings ->
             if (settings?.authorizationStatus == UNAuthorizationStatusAuthorized) {
 
-                // 1. Calculate the delay using your utility
+                // 1. Parse the Date and Time (Assuming "YYYY-MM-DD" and "10:30 AM")
+                val dateParts = dateString.split("-") // [2026, 05, 01]
+                if (dateParts.size < 3) return@getNotificationSettingsWithCompletionHandler
+
+                // Use your existing helper to get 24-hour time
                 val eventMinutes = convertTimeToMinutes(startTime)
+                val eventHour = eventMinutes / 60
+                val eventMinute = eventMinutes % 60
 
-                // Get current time (You'll need a small helper or use NSDate)
-                val now = NSDate()
-                val calendar = NSCalendar.currentCalendar
-                val components = calendar.components(
-                    NSCalendarUnitHour or NSCalendarUnitMinute,
-                    fromDate = now
-                )
-                val currentMinutes = (components.hour * 60L) + components.minute
-
-                // Calculate delay: (Event Time - Current Time - 10 minutes buffer)
-                val delayInMinutes = eventMinutes - currentMinutes - 10
-                val delayInSeconds = delayInMinutes * 60.0
-
-                // 2. SAFETY CHECK: Only schedule if the event is in the future
-                // If the delay is less than 5 seconds, just don't schedule it.
-                if (delayInSeconds < 5.0) {
-                    println("Event is too soon or in the past. Skipping notification.")
-                    return@getNotificationSettingsWithCompletionHandler
+                // 2. Create Date Components for the trigger
+                val components = NSDateComponents().apply {
+                    setYear(dateParts[0].toLong())
+                    setMonth(dateParts[1].toLong())
+                    setDay(dateParts[2].toLong())
+                    setHour((eventHour).toLong())
+                    setMinute((eventMinute).toLong())
+                    // Optional: Subtract 10 minutes for the buffer
+                    // setMinute((eventMinute - 10).toLong())
                 }
 
+                // 3. Setup Content
                 val content = UNMutableNotificationContent().apply {
                     setTitle("Event Starting Soon!")
-                    setBody("$title is about to start at $startTime")
+                    setBody("$title is starting at $startTime")
                     setSound(UNNotificationSound.defaultSound())
                 }
 
-                // 3. Use the dynamic delay
-                val trigger = UNTimeIntervalNotificationTrigger.triggerWithTimeInterval(delayInSeconds, false)
+                // 4. Calendar Trigger (repeats = false)
+                val trigger = UNCalendarNotificationTrigger.triggerWithDateMatchingComponents(components, false)
 
                 val request = UNNotificationRequest.requestWithIdentifier(id, content, trigger)
 
                 center.addNotificationRequest(request) { error ->
-                    if (error != null) println("Error: ${error.localizedDescription}")
+                    if (error != null) {
+                        println("iOS Notification Error: ${error.localizedDescription}")
+                    } else {
+                        println("Notification Scheduled for $dateString at $startTime")
+                    }
                 }
             }
         }

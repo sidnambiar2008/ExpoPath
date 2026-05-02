@@ -15,18 +15,45 @@ object AndroidMapConfig {
         get() = _context?.get()
         set(value) { _context = value?.let { WeakReference(it) } }
 }
-@Suppress("WrongConstant") // This specifically targets the flag error
-actual fun openMap(lat: Double, lon: Double, label: String, context: Any?) {
-    // Check the passed context first, then our global backup
+@Suppress("WrongConstant")
+actual fun openMap(
+    lat: Double,
+    lon: Double,
+    label: String,
+    conferenceAddress: String, // Add this parameter
+    context: Any?
+) {
     val actualContext = (context as? android.content.Context) ?: AndroidMapConfig.context
 
     if (actualContext != null) {
-        val uri = Uri.parse("geo:$lat,$lon?q=$lat,$lon($label)")
-        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
-        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-        actualContext.startActivity(intent)
+        val uriString = if (lat != 0.0 && lon != 0.0) {
+            // SCENARIO A: Exact GPS
+            "geo:$lat,$lon?q=$lat,$lon(${Uri.encode(label)})"
+        } else {
+            // SCENARIO B: Anchored Search (e.g., "Room 204, USC Village")
+            // This ensures Google Maps searches within the right building
+            val fullQuery = "$label, $conferenceAddress"
+            "geo:0,0?q=${Uri.encode(fullQuery)}"
+        }
+
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriString))
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+        try {
+            actualContext.startActivity(intent)
+        } catch (e: Exception) {
+            // Fallback: If no Map app is installed, try opening in a browser
+            val webUri = if (lat != 0.0 && lon != 0.0) {
+                "https://www.google.com/maps/search/?api=1&query=$lat,$lon"
+            } else {
+                "https://www.google.com/maps/search/?api=1&query=${Uri.encode("$label, $conferenceAddress")}"
+            }
+            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(webUri))
+            webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            actualContext.startActivity(webIntent)
+        }
     } else {
-        android.util.Log.e("MAP_ERROR", "No context found to launch map!")
+        Log.e("MAP_ERROR", "No context found to launch map!")
     }
 }
 actual class LocationProvider actual constructor() {

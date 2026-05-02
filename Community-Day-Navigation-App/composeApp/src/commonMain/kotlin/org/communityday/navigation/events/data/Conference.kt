@@ -15,7 +15,8 @@ data class Conference(
     val description: String = "",
     val isPublished: Boolean = false,
     val ownerId: String = "",
-    val dateMillis: Long = 0L,
+    @SerialName("location") val address: String = "",
+    //val dateMillis: Long = 0L,
     val dateString: String = ""
 )
 

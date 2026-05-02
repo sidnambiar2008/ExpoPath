@@ -28,7 +28,10 @@ import org.communityday.navigation.events.utils.convertTimeToMinutes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.delay
 import org.communityday.navigation.events.mapDirectory.LocationProvider
 import kotlin.toString
@@ -236,7 +239,14 @@ fun AddEventDialog(
     }
     var locationError by remember { mutableStateOf<String?>(null) }
     var capacityText by remember(initialEvent) {
-        mutableStateOf(initialEvent?.capacity?.toString() ?: "-1")
+        // If we have an event, get its capacity; otherwise null
+        val currentCap = initialEvent?.capacity
+
+        // Logic: If it's -1 or null, show an empty string so the placeholder/RequiredLabel can work.
+        // Otherwise, show the actual number.
+        val displayValue = if (currentCap == null || currentCap == -1) "" else currentCap.toString()
+
+        mutableStateOf(displayValue)
     }
 
     LaunchedEffect(locationError) {
@@ -256,7 +266,7 @@ fun AddEventDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Event Title") },
+                    label = { RequiredLabel("Event Title") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -264,7 +274,7 @@ fun AddEventDialog(
                     OutlinedTextField(
                         value = startTime,
                         onValueChange = {}, // Read-only
-                        label = { Text("Start Time") },
+                        label = { RequiredLabel("Start Time") },
                         readOnly = true,
                         modifier = Modifier.weight(1f),
                         trailingIcon = {
@@ -277,7 +287,7 @@ fun AddEventDialog(
                     OutlinedTextField(
                         value = endTime,
                         onValueChange = {}, // Read-only
-                        label = { Text("End Time") },
+                        label = { RequiredLabel("End Time") },
                         readOnly = true,
                         modifier = Modifier.weight(1f),
                         trailingIcon = {
@@ -320,25 +330,40 @@ fun AddEventDialog(
                     OutlinedTextField(
                         value = latText,
                         onValueChange = { latText = it },
-                        label = { Text("Lat") },
+                        label = {
+                            Text(
+                                text = "Latitude (Optional)",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                     OutlinedTextField(
                         value = lonText,
                         onValueChange = { lonText = it },
-                        label = { Text("Long") },
+                        label = {
+                            Text(
+                                text = "Longitude (Optional)",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
-                    OutlinedTextField(
-                        value = capacityText,
-                        onValueChange = { capacityText = it },
-                        label = { Text("Cap") }, // Shortened label so it doesn't wrap weirdly
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
                 }
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = capacityText,
+                    onValueChange = { capacityText = it },
+                    label = { RequiredLabel("Capacity") }, // Shortened label so it doesn't wrap weirdly
+                    placeholder = { Text("e.g. 1000 for unlimited") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
                 // The GPS Button
                 Button(
                     onClick = {
@@ -348,47 +373,44 @@ fun AddEventDialog(
                                 latText = lat.toString()
                                 lonText = lon.toString()
                                 locationError = null
-                            }
-                            else {
-                                // Set the message you want the user to see
-                                locationError = "GPS warming up or permission pending. Try again or edit later"
+                            } else {
+                                locationError = "GPS warming up or permission pending. Try again."
                             }
                             isLocating = false
                         }
                     },
                     enabled = !isLocating,
-                    // This makes the button Turquoise
                     colors = ButtonDefaults.buttonColors(
+                        // If already pinned, maybe slightly fade it or keep it vibrant
                         containerColor = Turquoise,
-                        contentColor = Color.White // Text and Icon will be White
+                        contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.height(56.dp) // Matches standard TextField height
-
+                    modifier = Modifier.fillMaxWidth().height(50.dp)
                 ) {
                     if (isLocating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp
-                        )
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(
                                 imageVector = vectorResource(Res.drawable.ic_location_on),
                                 contentDescription = null,
-                                modifier = Modifier.size(20.dp) // Slightly larger for visibility
+                                modifier = Modifier.size(20.dp)
                             )
+                            // Visual cue: "Update" vs "Pin"
                             Text(
-                                text = "Get GPS",
+                                text = if (latText.isNotBlank()) "Update Exact GPS" else "Pin Exact GPS",
                                 style = MaterialTheme.typography.labelLarge
                             )
                         }
                     }
                 }
+                Text(
+                    text = "Tip: Pin exact GPS for better map accuracy, or leave blank to use the address.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Black.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
+                )
                 locationError?.let { message ->
                     Text(
                         text = message,
@@ -401,7 +423,12 @@ fun AddEventDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Description") },
+                    label = {
+                        Text(
+                            text = "Description",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3
                 )
@@ -409,13 +436,12 @@ fun AddEventDialog(
                 OutlinedTextField(
                     value = location,
                     onValueChange = { location = it },
-                    label = { Text("Location Address") },
+                    label = { RequiredLabel("Location/Address") },
+                    placeholder = { Text("e.g. Room 204 or 123 Main St") },
                     modifier = Modifier.fillMaxWidth(),
-                    minLines = 3
+                    minLines = 2
                 )
-
-
-
+/*
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { // Shorter gap here
                     if (initialEvent != null) {
                         Column(
@@ -449,7 +475,9 @@ fun AddEventDialog(
                             }
                         }
                     }
+
                 }
+                */
 
                 if (errorMessage != null) {
                     Text(
@@ -464,25 +492,33 @@ fun AddEventDialog(
         },
         confirmButton = {
             Button(
-                enabled = title.isNotBlank() && !isSaving,
+                enabled = title.isNotBlank() && location.isNotBlank() && capacityText.isNotBlank() && !isSaving,
                 onClick = {
                     val startMin = convertTimeToMinutes(startTime)
                     val endMin = convertTimeToMinutes(endTime)
+                    val capacityInt = capacityText.toIntOrNull()
                     when {
                         title.isBlank() -> {
                             errorMessage = "Event Title is required."
                         }
 
+                        location.isBlank() -> errorMessage = "Location Address (or Room #) is required."
+
                         startTime.isBlank() || endTime.isBlank() -> {
                             errorMessage = "Please select both Start and End times."
+                        }
+
+                        capacityText.isBlank() || capacityInt == null -> {
+                            errorMessage = "Capacity is required (Enter a large number for unlimited)."
                         }
 
                         endMin <= startMin -> {
                             errorMessage = "End time must be after start time."
                         }
 
-                        latText.toDoubleOrNull() == null || lonText.toDoubleOrNull() == null -> {
-                            errorMessage = "Valid GPS coordinates are required."
+                        (latText.isNotBlank() && latText.toDoubleOrNull() == null) ||
+                                (lonText.isNotBlank() && lonText.toDoubleOrNull() == null) -> {
+                            errorMessage = "If providing GPS, please enter valid coordinates."
                         }
 
                         else -> {
@@ -499,7 +535,7 @@ fun AddEventDialog(
                                     longitude = lonText.toDoubleOrNull(),
                                     location = location, // Make sure location is here too
                                     sortOrder = 1,
-                                    capacity = capacityText.toIntOrNull() ?: -1, // ADD THIS
+                                    capacity = capacityInt, // ADD THIS
                                     registeredCount = initialEvent?.registeredCount ?: 0
                                 )
 
@@ -510,7 +546,7 @@ fun AddEventDialog(
                                     repository.updateEvent(
                                         confId,
                                         eventData
-                                    ) // 👈 Use the update function we wrote
+                                    )
                                 }
 
                                 isSaving = false
@@ -568,7 +604,7 @@ fun AddBoothDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Company / Organization Name") },
+                    label = { RequiredLabel("Company/Organization Name") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -576,14 +612,22 @@ fun AddBoothDialog(
                     OutlinedTextField(
                         value = latText,
                         onValueChange = { latText = it },
-                        label = { Text("Lat") },
+                        label = {
+                            Text(
+                                text = "Latitude (Optional)",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
                         modifier = Modifier.weight(1f)
                     )
 
                     OutlinedTextField(
                         value = lonText,
                         onValueChange = { lonText = it },
-                        label = { Text("Long") },
+                        label = {  Text(
+                            text = "Longitude (Optional)",
+                            style = MaterialTheme.typography.labelSmall
+                        ) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -597,41 +641,33 @@ fun AddBoothDialog(
                                 latText = lat.toString()
                                 lonText = lon.toString()
                                 locationError = null
-                            }
-                            else {
-                                // Set the message you want the user to see
-                                locationError = "GPS warming up or permission pending. Try again or edit later"
+                            } else {
+                                locationError = "GPS warming up or permission pending. Try again."
                             }
                             isLocating = false
                         }
                     },
                     enabled = !isLocating,
-                    // This makes the button Turquoise
                     colors = ButtonDefaults.buttonColors(
+                        // If already pinned, maybe slightly fade it or keep it vibrant
                         containerColor = Turquoise,
-                        contentColor = Color.White // Text and Icon will be White
+                        contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.height(56.dp) // Matches standard TextField height
+                    modifier = Modifier.fillMaxWidth().height(50.dp)
                 ) {
                     if (isLocating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp
-                        )
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(
                                 imageVector = vectorResource(Res.drawable.ic_location_on),
                                 contentDescription = null,
-                                modifier = Modifier.size(20.dp) // Slightly larger for visibility
+                                modifier = Modifier.size(20.dp)
                             )
+                            // Visual cue: "Update" vs "Pin"
                             Text(
-                                text = "Get GPS",
+                                text = if (latText.isNotBlank()) "Update Exact GPS" else "Pin Exact GPS",
                                 style = MaterialTheme.typography.labelLarge
                             )
                         }
@@ -645,11 +681,20 @@ fun AddBoothDialog(
                         modifier = Modifier.padding(top = 4.dp, start = 8.dp)
                     )
                 }
+                Text(
+                    text = "Tip: Pin exact GPS for better map accuracy, or leave blank to use the address.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Black.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
+                )
 
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Brief Description (Optional)") },
+                    label = {  Text(
+                        text = "Description (Optional)",
+                        style = MaterialTheme.typography.labelSmall
+                    ) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2
                 )
@@ -657,7 +702,7 @@ fun AddBoothDialog(
                 OutlinedTextField(
                     value = location,
                     onValueChange = { location = it },
-                    label = { Text("Location") },
+                    label = { RequiredLabel("Location/Address") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3
                 )
@@ -666,7 +711,7 @@ fun AddBoothDialog(
         },
         confirmButton = {
             Button(
-                enabled = name.isNotBlank() && !isSaving,
+                enabled = name.isNotBlank() && location.isNotBlank() && !isSaving,
                 onClick = {
                     if (latText.toDoubleOrNull() == null || lonText.toDoubleOrNull() == null) {
                         // You'd need to add an errorMessage state to AddBoothDialog too
@@ -679,10 +724,10 @@ fun AddBoothDialog(
                             val newBooth = org.communityday.navigation.events.data.Booth(
                                 name = name,
                                 id = initialBooth?.id ?: "",
-                                latitude = latText.toDoubleOrNull() ?: 0.0,
-                                longitude = lonText.toDoubleOrNull() ?: 0.0,
+                                latitude = latText.toDoubleOrNull(),
+                                longitude = lonText.toDoubleOrNull(),
                                 description = description,
-                                location = description
+                                location = location
                             )
                             // Make sure your repository has an addBooth function!
                             val result = if (initialBooth == null) {
@@ -775,4 +820,14 @@ fun TimeSelectionDialog(
             TimePicker(state = state)
         }
     )
+}
+
+@Composable
+fun RequiredLabel(text: String) {
+    Text(buildAnnotatedString {
+        append(text)
+        withStyle(style = SpanStyle(color = Color.Red)) {
+            append(" *")
+        }
+    }, style = MaterialTheme.typography.labelSmall)
 }

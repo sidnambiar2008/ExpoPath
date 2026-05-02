@@ -41,7 +41,7 @@ actual class NotificationScheduler actual constructor() {
         }
     }
 
-    actual fun scheduleEventNotification(id: String, title: String, startTime: String) {
+    actual fun scheduleEventNotification(id: String, title: String, startTime: String, dateString: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         // Create the notification visual

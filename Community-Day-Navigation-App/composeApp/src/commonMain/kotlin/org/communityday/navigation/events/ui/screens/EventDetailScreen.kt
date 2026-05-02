@@ -28,6 +28,7 @@ import communitydaynavigationapp.composeapp.generated.resources.ic_schedule
 import org.communityday.navigation.events.mapDirectory.openMap
 import androidx.compose.runtime.CompositionLocalProvider
 import kotlinx.coroutines.launch
+import org.communityday.navigation.events.data.Conference
 import org.communityday.navigation.events.data.EventRepository
 import org.communityday.navigation.events.notifications.NotificationScheduler
 
@@ -37,6 +38,7 @@ fun EventDetailScreen(
     event: Event,
     repository: EventRepository, // Pass this in
     onBackClick: () -> Unit,
+    conferenceAddress: String,
     modifier: Modifier = Modifier
 ) {
 
@@ -48,6 +50,7 @@ fun EventDetailScreen(
     val Turquoise = Color(0xFF40E0D0)
     val scope = rememberCoroutineScope()
     val scheduler = remember { NotificationScheduler() }
+    val conference by repository.getConferenceById(confId).collectAsState(null)
 
     // 1. Listen to which events this user is registered for
     val registeredIds by repository.getRegisteredEventIds().collectAsState(emptySet())
@@ -189,27 +192,34 @@ fun EventDetailScreen(
                                     repository.saveEventToUserSchedule(confId, event.id)
                                 }
                             }
-                        }
+                        },
+                        currentConference = conference,
                     )
                 }
             }
             
             // Action Button
             item {
-                if (event.latitude != null && event.longitude != null) {
+                // Only show the section if there is actually a location to show
+                if ((event.latitude != null && event.longitude != null) || event.location.isNotBlank()) {
+
                     Button(
                         onClick = {
+                            // 1. Grab the "Anchor" from the state we collected at the top of the screen
+                            val anchor = conferenceAddress.ifBlank { conference?.address ?: "" }
+
+                            // 2. Call the smart function.
+                            // We pass 0.0 if the lat/lon is null; the actual fun handles the rest.
                             openMap(
-                                lat = event.latitude,
-                                lon = event.longitude,
-                                label = event.title,
+                                lat = event.latitude ?: 0.0,
+                                lon = event.longitude ?: 0.0,
+                                label = event.location, // e.g. "Room 204"
+                                conferenceAddress = anchor, // THE ANCHOR!
                                 context = context
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = ActionOrange
-                        )
+                        colors = ButtonDefaults.buttonColors(containerColor = ActionOrange)
                     ) {
                         Icon(
                             imageVector = vectorResource(Res.drawable.ic_map),
@@ -224,9 +234,16 @@ fun EventDetailScreen(
                             fontWeight = FontWeight.Bold
                         )
                     }
-                }
-                else {
-                    Text("Physical Location: ${event.location}")
+
+                    // Secondary Text for exact room/spot detail
+                    if (event.location.isNotBlank()) {
+                        Text(
+                            text = "Location: ${event.location}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Silver.copy(alpha = 0.7f), // Keep it readable against NavyBlue
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
                 }
             }
         }
@@ -373,6 +390,7 @@ private fun RegistrationCard(
     capacity: Int,
     backgroundColor: Color,
     iconTint: Color,
+    currentConference: Conference?,
     isAlreadyRegistered: Boolean, // New parameter
     onRegisterClick: () -> Unit
 ) {
@@ -426,11 +444,13 @@ private fun RegistrationCard(
                                 // Do your database work
                                 onRegisterClick()
 
+                                val dateToUse = currentConference?.dateString ?: "2026-05-01"
                                 // Schedule the alert
                                 scheduler.scheduleEventNotification(
                                     id = event.id,
                                     title = event.title,
-                                    startTime = event.startTime
+                                    startTime = event.startTime,
+                                    dateString = dateToUse, // Pass the date here!
                                 )
                             } else {
                                 // --- LEAVING ---

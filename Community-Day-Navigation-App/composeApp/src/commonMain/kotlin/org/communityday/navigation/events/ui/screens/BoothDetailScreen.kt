@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -15,9 +16,9 @@ import org.communityday.navigation.events.mapDirectory.openMap
 @Composable
 fun BoothDetailScreen(
     booth: Booth,
+    conferenceAddress: String, // Add this parameter
     onBackClick: () -> Unit
 ) {
-
     val context: Any? = null
     val NavyBlue = Color(0xFF000033)
     val Silver = Color(0xFFC0C0C0)
@@ -92,13 +93,17 @@ fun BoothDetailScreen(
         )
 
         Spacer(modifier = Modifier.weight(1f))
-        if (booth.latitude != null && booth.longitude != null) {
+
+        // --- New Smart Map Section ---
+        // Show the button if we have coordinates OR a specific booth location string
+        if ((booth.latitude != null && booth.longitude != null) || booth.location.isNotBlank()) {
             Button(
                 onClick = {
                     openMap(
-                        lat = booth.latitude,
-                        lon = booth.longitude,
-                        label = booth.name,
+                        lat = booth.latitude ?: 0.0,
+                        lon = booth.longitude ?: 0.0,
+                        label = booth.location.ifBlank { booth.name },
+                        conferenceAddress = conferenceAddress, // The "Neighborhood" Anchor
                         context = context
                     )
                 },
@@ -110,10 +115,17 @@ fun BoothDetailScreen(
             ) {
                 Text("Find Booth on Map", color = NavyBlue, fontWeight = FontWeight.Bold)
             }
-        }
-        else
-        {
-            Text("Physical Location: ${booth.location}")
+
+            // Show the text below the button so they know which booth to look for
+            if (booth.location.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Location: ${booth.location}",
+                    color = Silver,
+                    fontSize = 14.sp,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

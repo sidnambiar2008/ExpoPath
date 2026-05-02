@@ -154,7 +154,8 @@ class EventRepository {
                 joinCode = conference.joinCode,
                 objectID = conference.joinCode,
                 isPublic = conference.isPublic,
-                dateString = conference.dateString
+                dateString = conference.dateString, // Ensure this is passed
+                address = conference.address
             )
 
             firestore.collection("conferences")
@@ -400,23 +401,21 @@ class EventRepository {
             Result.failure(e)
         }
     }
-    /**
-     * Your safety net: If Firebase is empty or offline
-     */
-    fun getMockEvents(): List<Event> {
-        return listOf(
-            Event(
-                id = "mock_1",
-                title = "Offline: Check Connection",
-                description = "We couldn't reach the cloud. Showing local data.",
-                category = EventCategory.OTHER,
-                location = "Unknown",
-                startTime = "--:--",
-                endTime = "--:--",
-                latitude = 0.0,
-                longitude = 0.0
-            )
-        )
+    fun getConferenceById(confId: String): Flow<Conference?> {
+        return firestore.collection("conferences")
+            .document(confId)
+            .snapshots
+            .map { snapshot ->
+                if (snapshot.exists) {
+                    snapshot.data<Conference>().copy(objectID = snapshot.id)
+                } else {
+                    null
+                }
+            }
+            .catch { e ->
+                println("Error fetching conference $confId: ${e.message}")
+                emit(null)
+            }
     }
 }
 

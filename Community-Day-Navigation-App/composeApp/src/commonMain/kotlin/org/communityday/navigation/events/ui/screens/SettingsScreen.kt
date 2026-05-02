@@ -26,12 +26,12 @@ import org.communityday.navigation.events.mapDirectory.openMap
 @Composable
 fun SettingsScreen(
     onDeleteAccount: () -> Unit,
-    showSecurityWarning: Boolean, // Add this
-    onDismissSecurityWarning: () -> Unit, // Add this,
+    showSecurityWarning: Boolean,
+    onDismissSecurityWarning: () -> Unit,
     isDeleting: Boolean
 ) {
     val NavyBlue = Color(0xFF000033)
-    val CardBlue = Color(0xFF1A1A4D) // Matches your LegalCard
+    val CardBlue = Color(0xFF1A1A4D)
     val Silver = Color(0xFFC0C0C0)
     val Turquoise = Color(0xFF40E0D0)
     val DangerRed = Color(0xFFCF6679)
@@ -163,7 +163,8 @@ fun LegalCard(Silver: Color) {
 
             // 3. Contact Support (Opens the user's default email app)
             LegalLink("Contact Support", Turquoise) {
-                uriHandler.openUri("mailto:your-email@usc.edu?subject=ExpoPath%20Support")
+                //uriHandler.openUri("mailto:your-email@usc.edu?subject=ExpoPath%20Support")
+                uriHandler.openUri("$baseUrl/SUPPORT.md")
             }
         }
     }

@@ -19,8 +19,13 @@ class AuthRepository {
         }
     }
 
-    suspend fun logout() {
-        auth.signOut()
+    suspend fun performSignOut(): Result<Unit> {
+        return try {
+            auth.signOut() // This calls the library function you found
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
     suspend fun signUp(email: String, password: String): Result<Unit> {
         return try {
@@ -49,4 +54,6 @@ class AuthRepository {
             Result.failure(e)
         }
     }
+
+    fun getCurrentUser() = auth.currentUser
 }
