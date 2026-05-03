@@ -2,6 +2,7 @@ package org.communityday.navigation.events.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,6 +28,8 @@ import communitydaynavigationapp.composeapp.generated.resources.ic_person
 import communitydaynavigationapp.composeapp.generated.resources.ic_schedule
 import org.communityday.navigation.events.mapDirectory.openMap
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import kotlinx.coroutines.launch
 import org.communityday.navigation.events.data.Conference
 import org.communityday.navigation.events.data.EventRepository
@@ -55,12 +58,20 @@ fun EventDetailScreen(
     // 1. Listen to which events this user is registered for
     val registeredIds by repository.getRegisteredEventIds().collectAsState(emptySet())
     val isUserRegistered = registeredIds.contains(event.id)
+    val focusManager = LocalFocusManager.current // 1. Add this
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(NavyBlue)
+            // 2. Add this modifier to the main container
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                })
+            }
             .padding(16.dp)
+
     ) {
         // Header with back button
         Row(
@@ -206,7 +217,8 @@ fun EventDetailScreen(
                     Button(
                         onClick = {
                             // 1. Grab the "Anchor" from the state we collected at the top of the screen
-                            val anchor = conferenceAddress.ifBlank { conference?.address ?: "" }
+                            val anchor = conference?.address ?: conferenceAddress
+                            println("Debug: Anchor address is -> $anchor")
 
                             // 2. Call the smart function.
                             // We pass 0.0 if the lat/lon is null; the actual fun handles the rest.

@@ -12,11 +12,18 @@ actual fun openMap(
     conferenceAddress: String,
     context: Any?
 ) {
-    val encodedLabel = label.replace(" ", "+")
-    val encodedAddress = conferenceAddress.trim().replace("\n", "+")
+    val encodedLabel = label.trim().replace(" ", "+")
+    val encodedAddress = conferenceAddress.trim().replace("\n", "+").replace(" ", "+")
 
-    // If no GPS, we "Anchor" the search to the building
-    val searchQuery = if (lat == 0.0) "$encodedLabel,+$encodedAddress" else encodedLabel
+    val searchQuery = if (lat == 0.0) {
+        if (encodedAddress.isNotBlank()) {
+            "$encodedLabel,+$encodedAddress" // Result: "Ooga,+123+Main+St"
+        } else {
+            encodedLabel // Result: "Ooga" (At least no trailing comma!)
+        }
+    } else {
+        encodedLabel
+    }
 
     val googleUrlString: String
     val appleUrlString: String
@@ -24,8 +31,8 @@ actual fun openMap(
 
     if (lat != 0.0 && lon != 0.0) {
         // EXACT MODE
-        googleUrlString = "comgooglemaps://?q=$lat,$lon($encodedLabel)&center=$lat,$lon&zoom=17"
-        appleUrlString = "http://maps.apple.com/?ll=$lat,$lon&q=$encodedLabel"
+        googleUrlString = "comgooglemaps://?q=$encodedAddress($encodedLabel)"
+        appleUrlString = "http://maps.apple.com/?q=$encodedLabel&address=$encodedAddress"
         webFallbackUrl = "https://www.google.com/maps/search/?api=1&query=$lat,$lon"
     } else {
         // ANCHORED SEARCH MODE

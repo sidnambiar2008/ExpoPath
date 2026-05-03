@@ -103,7 +103,7 @@ fun AdminDashboardScreen(
                 }
 
                 // 2. EVENTS SECTION
-                item { Text("Events", style = MaterialTheme.typography.titleLarge, color = Color.White) }
+                item { Text("Edit Events", style = MaterialTheme.typography.titleLarge, color = Color.White) }
 
                 if (events.isEmpty()) {
                     item { Text("No events added yet.", color = Color.Gray) }
@@ -121,7 +121,7 @@ fun AdminDashboardScreen(
                 // 3. BOOTHS SECTION
                 item {
                     Spacer(Modifier.height(16.dp))
-                    Text("Booths", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                    Text("Edit Booths", style = MaterialTheme.typography.titleLarge, color = Color.White)
                 }
 
                 if (booths.isEmpty()) {
@@ -140,7 +140,7 @@ fun AdminDashboardScreen(
                     TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = if (isAttendeeModeActive) "Exit to Profile Screen" else "Return to Home Screen",
-                            color = Silver.copy(alpha = 0.7f)
+                            color = Color.White.copy(alpha = 0.7f)
                         )
                     }
                 }
@@ -267,7 +267,8 @@ fun AddEventDialog(
                     value = title,
                     onValueChange = { title = it },
                     label = { RequiredLabel("Event Title") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     // START TIME FIELD
@@ -337,7 +338,7 @@ fun AddEventDialog(
                             )
                         },
                         modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     )
                     OutlinedTextField(
                         value = lonText,
@@ -357,7 +358,7 @@ fun AddEventDialog(
                     value = capacityText,
                     onValueChange = { capacityText = it },
                     label = { RequiredLabel("Capacity") }, // Shortened label so it doesn't wrap weirdly
-                    placeholder = { Text("e.g. 1000 for unlimited") },
+                    placeholder = { Text("e.g. 1000000 for unlimited") },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true
@@ -425,12 +426,13 @@ fun AddEventDialog(
                     onValueChange = { description = it },
                     label = {
                         Text(
-                            text = "Description",
+                            text = "Description (Details, Links, etc)",
                             style = MaterialTheme.typography.labelSmall
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    minLines = 3
+                    minLines = 1,
+                    maxLines = 6
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 OutlinedTextField(
@@ -439,45 +441,8 @@ fun AddEventDialog(
                     label = { RequiredLabel("Location/Address") },
                     placeholder = { Text("e.g. Room 204 or 123 Main St") },
                     modifier = Modifier.fillMaxWidth(),
-                    minLines = 2
+                    maxLines = 2
                 )
-/*
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { // Shorter gap here
-                    if (initialEvent != null) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color.Red.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
-                                .padding(8.dp)
-                        ) {
-                            Text(
-                                text = "DANGER ZONE",
-                                color = Color.Red,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Registrations: ${initialEvent.registeredCount}",
-                                    modifier = Modifier.weight(1f),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                TextButton(
-                                    onClick = {
-                                        scope.launch {
-                                            repository.forceResetEventCount(confId, initialEvent.id, 0)
-                                            onSuccess()
-                                        }
-                                    }
-                                ) {
-                                    Text("RESET TO 0", color = Color.Red, fontWeight = FontWeight.ExtraBold)
-                                }
-                            }
-                        }
-                    }
-
-                }
-                */
 
                 if (errorMessage != null) {
                     Text(
@@ -570,7 +535,7 @@ fun AddEventDialog(
 fun AddBoothDialog(
     confId: String,
     repository: EventRepository,
-    initialBooth: org.communityday.navigation.events.data.Booth? = null, // 👈 Added this
+    initialBooth: org.communityday.navigation.events.data.Booth? = null,
     onDismiss: () -> Unit,
     onSuccess: () -> Unit,
     Turquoise: Color
@@ -583,10 +548,9 @@ fun AddBoothDialog(
     var location by remember(initialBooth) {mutableStateOf(initialBooth?.location?: "")}
     var isLocating by remember { mutableStateOf(false) }
     val locationProvider = remember {
-        LocationProvider() // We handle context inside the 'actual' logic
+        LocationProvider()
     }
     var locationError by remember { mutableStateOf<String?>(null) }
-
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(locationError) {
@@ -600,12 +564,14 @@ fun AddBoothDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (initialBooth == null) "Add New Booth" else "Edit Booth") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column( modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { RequiredLabel("Company/Organization Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 2
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -618,7 +584,9 @@ fun AddBoothDialog(
                                 style = MaterialTheme.typography.labelSmall
                             )
                         },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
 
                     OutlinedTextField(
@@ -628,7 +596,9 @@ fun AddBoothDialog(
                             text = "Longitude (Optional)",
                             style = MaterialTheme.typography.labelSmall
                         ) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                 }
 
@@ -692,7 +662,7 @@ fun AddBoothDialog(
                     value = description,
                     onValueChange = { description = it },
                     label = {  Text(
-                        text = "Description (Optional)",
+                        text = "Description (Links, Details, etc)",
                         style = MaterialTheme.typography.labelSmall
                     ) },
                     modifier = Modifier.fillMaxWidth(),
@@ -704,7 +674,7 @@ fun AddBoothDialog(
                     onValueChange = { location = it },
                     label = { RequiredLabel("Location/Address") },
                     modifier = Modifier.fillMaxWidth(),
-                    minLines = 3
+                    maxLines = 3
                 )
 
             }
@@ -713,9 +683,8 @@ fun AddBoothDialog(
             Button(
                 enabled = name.isNotBlank() && location.isNotBlank() && !isSaving,
                 onClick = {
-                    if (latText.toDoubleOrNull() == null || lonText.toDoubleOrNull() == null) {
-                        // You'd need to add an errorMessage state to AddBoothDialog too
-                        println("Error: Invalid Coordinates")
+                    if (name.isBlank() || location.isBlank()) {
+                        println("Please add the Exhibitor's Name and the address of the booth.\nFor a precise booth location, click Pin Exact GPS")
                     }
                     else {
                         scope.launch {

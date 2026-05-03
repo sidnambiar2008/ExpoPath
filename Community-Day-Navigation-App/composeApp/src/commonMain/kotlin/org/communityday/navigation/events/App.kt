@@ -529,7 +529,7 @@ fun WelcomeScreen(
         // Description
         AnimatedVisibility(showContent) {
             Text(
-                text = "Navigate through events\nconnect with the community\nand make the most of your day",
+                text = "Navigate through events\nConnect with the community\nMake the most of your day",
                 color = Silver.copy(alpha = 0.8f),
                 fontSize = 16.sp,
                 lineHeight = 24.sp,

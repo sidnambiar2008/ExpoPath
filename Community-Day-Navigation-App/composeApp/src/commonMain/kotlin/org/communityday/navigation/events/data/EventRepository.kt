@@ -155,7 +155,6 @@ class EventRepository {
                 objectID = conference.joinCode,
                 isPublic = conference.isPublic,
                 dateString = conference.dateString, // Ensure this is passed
-                address = conference.address
             )
 
             firestore.collection("conferences")

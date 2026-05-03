@@ -1,5 +1,6 @@
 package org.communityday.navigation.events.ui.screens
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -7,6 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,12 +27,20 @@ fun BoothDetailScreen(
     val Silver = Color(0xFFC0C0C0)
     val Turquoise = Color(0xFF40E0D0)
     val CardNavy = Color(0xFF1A1A4D)
+    val focusManager = LocalFocusManager.current // 1. Add this
+
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(NavyBlue)
-            .padding(24.dp)
+            // 2. Add this modifier to the main container
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                })
+            }
+            .padding(16.dp)
     ) {
         // --- Navigation ---
         TextButton(

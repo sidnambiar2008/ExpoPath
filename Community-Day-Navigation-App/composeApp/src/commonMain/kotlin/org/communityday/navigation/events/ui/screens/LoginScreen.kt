@@ -124,7 +124,7 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = if (isSignUp) "Create Admin Account" else "Admin Login",
+                    text = if (isSignUp) "Create Account" else "Login",
                     style = MaterialTheme.typography.headlineMedium,
                     color = Color.White
                 )

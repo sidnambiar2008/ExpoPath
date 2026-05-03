@@ -208,8 +208,9 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.1;
 				"OTHER_LDFLAGS[arch=*]" = "-Objc";
-				PRODUCT_BUNDLE_IDENTIFIER = org.communityday.navigation.events.CommunityDayNavigationApp;
+				PRODUCT_BUNDLE_IDENTIFIER = org.events.usc.ExpoPath;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -242,8 +243,9 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.1;
 				"OTHER_LDFLAGS[arch=*]" = "-Objc";
-				PRODUCT_BUNDLE_IDENTIFIER = org.communityday.navigation.events.CommunityDayNavigationApp;
+				PRODUCT_BUNDLE_IDENTIFIER = org.events.usc.ExpoPath;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

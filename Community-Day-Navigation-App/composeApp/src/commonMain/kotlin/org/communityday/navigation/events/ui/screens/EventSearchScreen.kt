@@ -157,7 +157,6 @@ fun ConferenceResultRow(conference: Conference, onClick: () -> Unit) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(conference.name, fontWeight = FontWeight.Bold)
-                    //Text(conference.location, style = MaterialTheme.typography.bodySmall)
                 Text(
                     text = "Code: ${conference.joinCode}",
                     style = MaterialTheme.typography.bodySmall,

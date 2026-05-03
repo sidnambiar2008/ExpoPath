@@ -221,7 +221,8 @@ fun StandardTextField(value: String, onValueChange: (String) -> Unit, label: Str
             focusedBorderColor = accent,
             unfocusedBorderColor = silver.copy(alpha = 0.7f),
             focusedLabelColor = accent,
-            unfocusedLabelColor = silver.copy(alpha = 0.8f)
-        )
+            unfocusedLabelColor = silver.copy(alpha = 0.8f),
+        ),
+        maxLines = 2
     )
 }

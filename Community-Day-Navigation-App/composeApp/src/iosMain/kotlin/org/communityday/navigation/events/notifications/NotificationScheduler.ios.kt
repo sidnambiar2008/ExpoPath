@@ -5,49 +5,59 @@ import platform.UserNotifications.*
 import platform.Foundation.* //
 
 actual class NotificationScheduler actual constructor() {
-    actual fun scheduleEventNotification(id: String, title: String, startTime: String, dateString: String,) {
+    actual fun scheduleEventNotification(id: String, title: String, startTime: String, dateString: String) {
         val center = UNUserNotificationCenter.currentNotificationCenter()
 
         center.getNotificationSettingsWithCompletionHandler { settings ->
             if (settings?.authorizationStatus == UNAuthorizationStatusAuthorized) {
 
-                // 1. Parse the Date and Time (Assuming "YYYY-MM-DD" and "10:30 AM")
-                val dateParts = dateString.split("-") // [2026, 05, 01]
+                val dateParts = dateString.split("-")
                 if (dateParts.size < 3) return@getNotificationSettingsWithCompletionHandler
 
-                // Use your existing helper to get 24-hour time
                 val eventMinutes = convertTimeToMinutes(startTime)
-                val eventHour = eventMinutes / 60
-                val eventMinute = eventMinutes % 60
 
-                // 2. Create Date Components for the trigger
-                val components = NSDateComponents().apply {
-                    setYear(dateParts[0].toLong())
-                    setMonth(dateParts[1].toLong())
-                    setDay(dateParts[2].toLong())
-                    setHour((eventHour).toLong())
-                    setMinute((eventMinute).toLong())
-                    // Optional: Subtract 10 minutes for the buffer
-                    // setMinute((eventMinute - 10).toLong())
-                }
+                // --- Define our two offsets (in minutes) ---
+                val alerts = listOf(
+                    60 to "1 hour",    // 60 minutes before
+                    10 to "10 minutes" // 10 minutes before
+                )
 
-                // 3. Setup Content
-                val content = UNMutableNotificationContent().apply {
-                    setTitle("Event Starting Soon!")
-                    setBody("$title is starting at $startTime")
-                    setSound(UNNotificationSound.defaultSound())
-                }
+                alerts.forEach { (offset, label) ->
+                    var targetTotalMinutes = eventMinutes - offset
 
-                // 4. Calendar Trigger (repeats = false)
-                val trigger = UNCalendarNotificationTrigger.triggerWithDateMatchingComponents(components, false)
+                    // Basic safety check: if event is at 12:05 AM, don't go to -55 mins
+                    if (targetTotalMinutes < 0) targetTotalMinutes = 0
 
-                val request = UNNotificationRequest.requestWithIdentifier(id, content, trigger)
+                    val finalHour = targetTotalMinutes / 60
+                    val finalMinute = targetTotalMinutes % 60
 
-                center.addNotificationRequest(request) { error ->
-                    if (error != null) {
-                        println("iOS Notification Error: ${error.localizedDescription}")
-                    } else {
-                        println("Notification Scheduled for $dateString at $startTime")
+                    val components = NSDateComponents().apply {
+                        setYear(dateParts[0].toLong())
+                        setMonth(dateParts[1].toLong())
+                        setDay(dateParts[2].toLong())
+                        setHour(finalHour.toLong())
+                        setMinute(finalMinute.toLong())
+                        setTimeZone(NSTimeZone.localTimeZone)
+                    }
+
+                    // Setup Content
+                    val content = UNMutableNotificationContent().apply {
+                        setTitle("Event Starting Soon!")
+                        setBody("$title is starting in $label (at $startTime)")
+                        setSound(UNNotificationSound.defaultSound())
+                    }
+
+                    val trigger = UNCalendarNotificationTrigger.triggerWithDateMatchingComponents(components, false)
+
+                    // CRITICAL: Unique ID for each alert so they don't overwrite each other
+                    val uniqueId = "${id}_$offset"
+                    val request = UNNotificationRequest.requestWithIdentifier(uniqueId, content, trigger)
+
+                    center.addNotificationRequest(request) { error ->
+                        if (error == null) {
+                            val paddedMinute = finalMinute.toString().padStart(2, '0')
+                            println("Scheduling for: $finalHour:$paddedMinute")
+                        }
                     }
                 }
             }
