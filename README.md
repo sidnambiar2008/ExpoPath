@@ -1,2 +1,2 @@
-# Community Day Navigation App
-This app will be used for making navigation easier at conferences. For our event, we make it easier for community day. 
+# ExpoPath
+This app simplifies conference navigation for attendees while empowering organizers to manage events, booths, and schedules easily. Owners will be able to add and update information about specific events and booths present, such as the booth or conference location, any identifier (Booth 1A, for example), and the startTime and endTime for the events that will take place. Finally, links and other info about the exhibitors and hosts can be placed in the description of each booth. 
