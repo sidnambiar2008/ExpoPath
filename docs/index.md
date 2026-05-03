@@ -2,5 +2,5 @@ Welcome to the project documentation. Please use the links below or the buttons 
 
 * [Privacy Page](./PRIVACY)
 * [Support Page](./SUPPORT) 
-* [Licences Page](./LICENCES)
+* [Licenses Page](./LICENSES)
 * [Terms of Conditions Page](./TERMS)
