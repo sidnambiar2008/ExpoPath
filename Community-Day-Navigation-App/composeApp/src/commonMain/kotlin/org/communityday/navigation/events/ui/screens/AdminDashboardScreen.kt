@@ -354,29 +354,21 @@ fun AddEventDialog(
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                OutlinedTextField(
-                    value = capacityText,
-                    onValueChange = { capacityText = it },
-                    label = { RequiredLabel("Capacity") }, // Shortened label so it doesn't wrap weirdly
-                    placeholder = { Text("e.g. 1000000 for unlimited") },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
                 // The GPS Button
                 Button(
                     onClick = {
                         isLocating = true
                         locationProvider.getCurrentLocation { lat, lon ->
+                            // This code runs ONLY when the Delegate finally gets a result
                             if (lat != 0.0 && lon != 0.0) {
                                 latText = lat.toString()
                                 lonText = lon.toString()
                                 locationError = null
                             } else {
-                                locationError = "GPS warming up or permission pending. Try again."
+                                // If it returns 0.0 after a long wait, it's likely a timeout or deny
+                                locationError = "GPS timeout. Try moving closer to a window."
                             }
+                            // STOP the spinner
                             isLocating = false
                         }
                     },
@@ -407,7 +399,7 @@ fun AddEventDialog(
                     }
                 }
                 Text(
-                    text = "Tip: Pin exact GPS for better map accuracy, or leave blank to use the address.",
+                    text = "Tip: Pin exact GPS for better map accuracy, or leave blank to use the address. This will automatically fill in your latitude and longitude.",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Black.copy(alpha = 0.6f),
                     modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
@@ -420,6 +412,16 @@ fun AddEventDialog(
                         modifier = Modifier.padding(top = 4.dp, start = 8.dp)
                     )
                 }
+                OutlinedTextField(
+                    value = capacityText,
+                    onValueChange = { capacityText = it },
+                    label = { RequiredLabel("Capacity") }, // Shortened label so it doesn't wrap weirdly
+                    placeholder = { Text("e.g. 1000000 for unlimited") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = description,
@@ -607,13 +609,16 @@ fun AddBoothDialog(
                     onClick = {
                         isLocating = true
                         locationProvider.getCurrentLocation { lat, lon ->
+                            // This code runs ONLY when the Delegate finally gets a result
                             if (lat != 0.0 && lon != 0.0) {
                                 latText = lat.toString()
                                 lonText = lon.toString()
                                 locationError = null
                             } else {
-                                locationError = "GPS warming up or permission pending. Try again."
+                                // If it returns 0.0 after a long wait, it's likely a timeout or deny
+                                locationError = "GPS timeout. Try moving closer to a window."
                             }
+                            // STOP the spinner
                             isLocating = false
                         }
                     },
@@ -652,7 +657,7 @@ fun AddBoothDialog(
                     )
                 }
                 Text(
-                    text = "Tip: Pin exact GPS for better map accuracy, or leave blank to use the address.",
+                    text = "Tip: Pin exact GPS for better map accuracy, or leave blank to use the address. This will automatically fill in your latitude and longitude.",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Black.copy(alpha = 0.6f),
                     modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
@@ -673,6 +678,7 @@ fun AddBoothDialog(
                     value = location,
                     onValueChange = { location = it },
                     label = { RequiredLabel("Location/Address") },
+                    placeholder = { Text("e.g. Booth 1A or 123 Main St") },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3
                 )

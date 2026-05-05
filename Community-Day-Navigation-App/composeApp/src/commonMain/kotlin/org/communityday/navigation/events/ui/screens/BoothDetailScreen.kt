@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -23,6 +24,8 @@ import org.jetbrains.compose.resources.vectorResource
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import communitydaynavigationapp.composeapp.generated.resources.ic_back_arrow
+import communitydaynavigationapp.composeapp.generated.resources.ic_block
 import kotlinx.coroutines.launch
 import org.communityday.navigation.events.data.EventRepository
 
@@ -41,8 +44,11 @@ fun BoothDetailScreen(
     val CardNavy = Color(0xFF1A1A4D)
     val focusManager = LocalFocusManager.current // 1. Add this
     var showSafetyDialog by remember { mutableStateOf(false) }
+    var showHideDialog by remember { mutableStateOf(false) }
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     val scope = rememberCoroutineScope()
+    val conference by repository.getConferenceById(confId).collectAsState(null)
+
 
 
     Column(
@@ -58,11 +64,24 @@ fun BoothDetailScreen(
             .padding(16.dp)
     ) {
         // --- Navigation ---
-        TextButton(
-            onClick = onBackClick,
-            contentPadding = PaddingValues(0.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("< Back to Exhibitors", color = Turquoise, fontSize = 16.sp)
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = vectorResource(Res.drawable.ic_back_arrow),
+                    contentDescription = "Back",
+                    tint = Turquoise
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Event Details",
+                color = Silver,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -161,24 +180,50 @@ fun BoothDetailScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp)) // Give it some space from the map info
-            IconButton(
-                onClick = { showSafetyDialog = true },
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = vectorResource(Res.drawable.ic_flag),
-                    contentDescription = "Safety Options",
-                    // Using a muted alpha makes the icon look high-end rather than like an error
-                    tint = Color(0xFFCF6679),
-                    modifier = Modifier.size(28.dp) // Slightly smaller for a "footer" feel
+                // BUTTON 1: REPORT
+                IconButton(
+                    onClick = {
+                        showSafetyDialog = true
+                    }
+                ) {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.ic_flag),
+                        contentDescription = "Report Content",
+                        tint = Color(0xFFCF6679).copy(alpha = 0.8f),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // A small vertical divider for a high-end look
+                Box(
+                    modifier = Modifier
+                        .height(20.dp)
+                        .width(1.dp)
+                        .background(Silver.copy(alpha = 0.3f))
+                        .padding(horizontal = 8.dp)
                 )
+
+                // BUTTON 2: HIDE
+                IconButton(
+                    onClick = {
+                        // You can show a simpler "Are you sure you want to hide?" dialog here
+                        showHideDialog = true
+                    }
+                ) {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.ic_block),
+                        contentDescription = "Hide Conference",
+                        tint = Color(0xFFCF6679).copy(alpha = 0.8f),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
-            Text(
-                text = "Report Content",
-                color = Color(0xFFCF6679),
-                fontSize = 10.sp, // Small and clean
-                fontWeight = FontWeight.Medium
-            )
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -187,40 +232,73 @@ fun BoothDetailScreen(
                     onDismissRequest = { showSafetyDialog = false },
                     containerColor = Color(0xFF1A1A4D),
                     title = {
-                        Text("Safety Options", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Report Content", color = Color.White, fontWeight = FontWeight.Bold)
                     },
                     text = {
                         Text(
-                            "Would you like to report this content for review, or hide this entire conference from your app?",
-                            color = Silver
+                            "You will be redirected to our community report form to provide details about this event.",
+                            color = Silver,
+                            fontSize = 14.sp
                         )
                     },
                     confirmButton = {
-                        // ACTION 1: REPORT
-                        TextButton(onClick = {
-                            showSafetyDialog = false
-                            uriHandler.openUri("https://docs.google.com/forms/...")
-                        }) {
-                            Text("Report", color = Turquoise)
+                        TextButton(
+                            onClick = {
+                                showSafetyDialog = false
+                                uriHandler.openUri("https://docs.google.com/forms/...")
+                            }
+                        ) {
+                            // The main action button
+                            Text("Report", color = Turquoise, fontWeight = FontWeight.Bold)
                         }
                     },
                     dismissButton = {
-                        Row {
-                            // ACTION 2: CANCEL (The "Oops" button)
-                            TextButton(onClick = { showSafetyDialog = false }) {
-                                Text("Cancel", color = Silver)
-                            }
-
-                            // ACTION 3: HIDE (The "Nuclear" button)
-                            TextButton(onClick = {
-                                showSafetyDialog = false
+                        TextButton(onClick = { showSafetyDialog = false }) {
+                            Text("Cancel", color = Silver)
+                        }
+                    }
+                )
+            }
+            if (showHideDialog) {
+                AlertDialog(
+                    onDismissRequest = { showHideDialog = false },
+                    containerColor = Color(0xFF1A1A4D),
+                    title = {
+                        Text("Hide Conference?", color = Color.White, fontWeight = FontWeight.Bold)
+                    },
+                    text = {
+                        Column {
+                            Text(
+                                "You will no longer see '${conference?.name}' or any of its events in your search results.",
+                                color = Silver,
+                                fontSize = 14.sp
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "This action cannot be undone easily.",
+                                color = Color(0xFFCF6679),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showHideDialog = false
                                 scope.launch {
                                     repository.hideConference(confId)
-                                    onBackClick()
+                                    onBackClick() // Send them home immediately
                                 }
-                            }) {
-                                Text("Hide Conference", color = Color(0xFFCF6679))
                             }
+                        ) {
+                            // Keep the color red/pink to signal it's a permanent "removal"
+                            Text("Hide", color = Color(0xFFCF6679), fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showHideDialog = false }) {
+                            Text("Cancel", color = Silver)
                         }
                     }
                 )

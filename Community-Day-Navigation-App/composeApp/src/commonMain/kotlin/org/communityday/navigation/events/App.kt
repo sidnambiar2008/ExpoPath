@@ -301,7 +301,8 @@ fun App(locationProvider: LocationProvider) {
                             Turquoise = Turquoise,
                             onNavigateToManageList = { currentScreen = Screen.ManageMyConference },
                             onBackClick = {currentScreen = Screen.Welcome},
-                            authRepository = authRepo
+                            authRepository = authRepo,
+                            viewModel = searchViewModel
                             )
                     }
 
@@ -338,7 +339,8 @@ fun App(locationProvider: LocationProvider) {
                                     }
                                 }
                             }
-                        }
+                        },
+                        authRepository = authRepo
                     )
 
                     is Screen.EventDetail -> {
@@ -376,7 +378,8 @@ fun App(locationProvider: LocationProvider) {
                             },
                             onBack = { currentScreen = Screen.Welcome },
                             onSwitchAccount = { currentScreen = Screen.Login},
-                            authRepository = authRepo
+                            authRepository = authRepo,
+                            viewModel = searchViewModel
                         )
                     }
 
@@ -423,7 +426,7 @@ fun App(locationProvider: LocationProvider) {
                             .padding(end = 16.dp, top = 4.dp)
                     ) {
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp), // Spaces the two buttons apart
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // --- Home Button Group ---
@@ -433,7 +436,7 @@ fun App(locationProvider: LocationProvider) {
                             ) {
                                 IconButton(
                                     onClick = { currentScreen = Screen.Welcome },
-                                    modifier = Modifier.size(40.dp)
+                                    modifier = Modifier.size(30.dp)
                                 ) {
                                     Icon(
                                         painter = painterResource(Res.drawable.ic_home),
@@ -446,20 +449,21 @@ fun App(locationProvider: LocationProvider) {
                                     text = "Home",
                                     color = Turquoise,
                                     fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center // Ensure text centers
                                 )
                             }
 
                             // --- Change Event Button Group ---
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
+                                // Add modifier if necessary to handle clickable, similar to home
                             ) {
                                 IconButton(
                                     onClick = { currentScreen = Screen.SearchConference },
-                                    modifier = Modifier.size(40.dp)
+                                    modifier = Modifier.size(40.dp) // This size 40 is likely making it larger
                                 ) {
                                     Icon(
-                                        // Make sure you have a swap or settings icon in your resources
                                         imageVector = vectorResource(Res.drawable.ic_swapconference),
                                         contentDescription = "Change Event",
                                         tint = Turquoise,
@@ -467,10 +471,12 @@ fun App(locationProvider: LocationProvider) {
                                     )
                                 }
                                 Text(
-                                    text = "Change Event",
+                                    text = "Change\nEvent",
                                     color = Turquoise,
                                     fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center, // <--- CRITICAL: Centers the "Event" under "Change"
+                                    lineHeight = 12.sp // <--- OPTIONAL: Tighter line height
                                 )
                             }
                         }
@@ -508,7 +514,7 @@ fun WelcomeScreen(
                 contentDescription = "App Logo",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .size(160.dp) // Adjust size as needed
+                    .size(240.dp) // Adjust size as needed
                     .padding(bottom = 16.dp)
             )
         }

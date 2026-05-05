@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.auth
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,13 +38,22 @@ class SearchViewModel(
     private var searchJob: Job? = null
 
     init {
-        // Start by showing all public conferences
-        onQueryChange("")
+        // 1. Trigger the initial search
+       // onQueryChange("")
 
-        // 3. Listen for changes in the "Hidden" list
         viewModelScope.launch {
-            delay(500)
+            Firebase.auth.authStateChanged.collect { user ->
+                // When account switches, clear everything and re-fetch
+                clearResults()
+                refresh()
+            }
+        }
+
+        // 2. Watch for changes in the "Hidden" list
+        viewModelScope.launch {
             hiddenIds.collect { currentHiddenSet ->
+                // Every time the user hides something OR switches accounts,
+                // this triggers and re-filters the current rawResults.
                 applyFilter(currentHiddenSet)
             }
         }
@@ -61,6 +72,7 @@ class SearchViewModel(
                 // Filter them immediately against our blacklist
                 applyFilter(hiddenIds.value)
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 results = emptyList()
             } finally {
                 isSearching = false
@@ -79,5 +91,15 @@ class SearchViewModel(
     // The logic that keeps "Nonsense" out of view
     private fun applyFilter(blockedIds: Set<String>) {
         results = rawResults.filter { it.joinCode !in blockedIds }.sortedBy { it.name }
+    }
+
+    fun refresh() {
+        // Re-run the search with the current query to force a fresh pull from Algolia
+        onQueryChange(query)
+    }
+    fun clearResults() {
+        rawResults = emptyList()
+        results = emptyList()
+        query = ""
     }
 }

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.communityday.navigation.events.utils.convertTimeToMinutes
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 class EventRepository {
     private val firestore = Firebase.firestore
@@ -415,17 +416,29 @@ class EventRepository {
         get() = Firebase.auth.currentUser?.uid ?: "anonymous_user"
 
     // Update these two functions in your EventRepository
+    @OptIn(ExperimentalCoroutinesApi::class) // You'll need this for flatMapLatest
     fun getHiddenIds(): Flow<Set<String>> {
-        val uid = auth.currentUser?.uid
-        if (uid == null) return flowOf(emptySet()) // Return empty if not logged in yet
+        // 1. Listen to the Auth state live
+        return auth.authStateChanged.flatMapLatest { user ->
+            val uid = user?.uid
 
-        return firestore.collection("users").document(uid)
-            .snapshots()
-            .map { snapshot ->
-                val list = snapshot.data<UserDoc>().hiddenConferences
-                list.toSet()
+            if (uid == null) {
+                // 2. If logged out, emit an empty set
+                flowOf(emptySet())
+            } else {
+                // 3. If logged in, open the Firestore listener for THIS specific UID
+                firestore.collection("users").document(uid)
+                    .snapshots()
+                    .map { snapshot ->
+                        // Handle the case where the document might not exist yet
+                        val data = snapshot.data<UserDoc>()
+                        data.hiddenConferences.toSet()
+                    }
             }
-            .catch { emit(emptySet()) } // Catch permission errors
+        }.catch { e ->
+            println("Hidden IDs Error: ${e.message}")
+            emit(emptySet())
+        }
     }
 
     suspend fun hideConference(confId: String) {

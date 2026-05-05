@@ -39,8 +39,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.text.style.TextAlign
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,17 +58,20 @@ fun EventSearchScreen(
     val ActionOrange = Color(0xFFFF8C00)
     var conferenceToHide by remember { mutableStateOf<Conference?>(null) }
 
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar( // The title to be centered
                 title = {
-                    Text(
-                        text = "Find your Event",
-                        style = MaterialTheme.typography.titleMedium, // Adjusted style for AppBar fit
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        modifier = Modifier.offset(y = 18.dp) // Positive y moves it DOWN
-                    )
+                  //  Text(
+                   //     text = "Find your Event",
+                    //    style = MaterialTheme.typography.titleMedium, // Adjusted style for AppBar fit
+                     //   color = Color.White,
+                      //  fontSize = 24.sp,
+                       // modifier = Modifier.offset(y = 12.dp) // Positive y moves it DOWN
+                    //)
                 },
                 navigationIcon = {
                     // We use a Row inside a clickable Box or TextButton to make the whole area touchable
@@ -75,20 +80,22 @@ fun EventSearchScreen(
                         contentPadding = PaddingValues(start = 8.dp) // Align it closer to the edge
                     ) {
                         Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = vectorResource(Res.drawable.ic_back_arrow),
-                                contentDescription = "Back",
-                                tint = ActionOrange,
-                                modifier = Modifier.size(20.dp) // Slightly smaller to fit text better
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            androidx.compose.material3.IconButton(onClick = onBackClick) {
+                                Icon(
+                                    imageVector = vectorResource(Res.drawable.ic_back_arrow),
+                                    contentDescription = "Back",
+                                    tint = Turquoise
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Back to Home",
-                                color = ActionOrange,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
+                                text = "Return to Home",
+                                color = Silver,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -101,6 +108,15 @@ fun EventSearchScreen(
         containerColor = NavyBlue //
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().background(NavyBlue).padding(innerPadding).padding(16.dp)) {
+            Text(
+                text = "Search for your Event",
+                color = Turquoise, // Use Silver or White so it's visible on Navy
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(bottom = 8.dp, start = 4.dp).fillMaxWidth(), // Small start padding to align with the box
+                textAlign = TextAlign.Center,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
             OutlinedTextField(
                 value = viewModel.query,
                 onValueChange = { viewModel.onQueryChange(it) },

@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.items
+import androidx.lifecycle.viewmodel.compose.viewModel
 import communitydaynavigationapp.composeapp.generated.resources.Res
 import communitydaynavigationapp.composeapp.generated.resources.ic_back_arrow
 import communitydaynavigationapp.composeapp.generated.resources.ic_edit
@@ -30,6 +31,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.vectorResource
 import kotlinx.coroutines.launch
 import org.communityday.navigation.events.data.AuthRepository
+import org.communityday.navigation.events.data.SearchViewModel
 
 
 @Composable
@@ -37,6 +39,7 @@ fun ProfileScreen(
     repository: EventRepository,
     onNavigateToManageList: () -> Unit,
     Turquoise: Color,
+    viewModel: SearchViewModel,
     authRepository: AuthRepository,
     onBackClick: () -> Unit,
 ) {
@@ -98,6 +101,7 @@ fun ProfileScreen(
             Surface(
                 onClick = {
                     scope.launch {
+                        viewModel.clearResults()
                         authRepository.performSignOut()
                         onBackClick()
                     }

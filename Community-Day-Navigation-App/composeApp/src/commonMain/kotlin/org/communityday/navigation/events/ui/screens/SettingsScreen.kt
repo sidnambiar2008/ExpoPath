@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import communitydaynavigationapp.composeapp.generated.resources.Res
 import communitydaynavigationapp.composeapp.generated.resources.ic_close
 import communitydaynavigationapp.composeapp.generated.resources.ic_warning
+import org.communityday.navigation.events.data.AuthRepository
 import org.communityday.navigation.events.data.EventRepository
 import org.communityday.navigation.events.mapDirectory.openMap
 import org.jetbrains.compose.resources.vectorResource
@@ -35,7 +36,7 @@ fun SettingsScreen(
     showSecurityWarning: Boolean,
     onDismissSecurityWarning: () -> Unit,
     isDeleting: Boolean,
-    currentUserId: String = "Anonymous"
+    authRepository: AuthRepository
 ) {
     val NavyBlue = Color(0xFF000033)
     val CardBlue = Color(0xFF1A1A4D)
@@ -45,6 +46,8 @@ fun SettingsScreen(
     val uriHandler = LocalUriHandler.current // Moved here to fix scope issue
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState() // For small screens
+    val user by authRepository.currentUser.collectAsState(initial = null)
+
 
 
     Box(modifier = Modifier.fillMaxSize().background(NavyBlue)) {
@@ -90,21 +93,34 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // --- Account Section ---
-            SettingsSectionHeader("Account Management", Turquoise)
+            if (user != null && user?.isAnonymous == false){
+                SettingsSectionHeader("Account Management", Turquoise)
 
-            Button(
-                onClick = { showDeleteConfirmation = true },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                enabled = !isDeleting, // Disable button while deleting
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DangerRed.copy(alpha = 0.2f),
-                    disabledContainerColor = Color.Gray.copy(alpha = 0.1f)
-                )
-            ) {
-                if (isDeleting) {
-                    CircularProgressIndicator(color = DangerRed, modifier = Modifier.size(20.dp))
-                } else {
-                    Text("Delete Account", color = DangerRed)
+                Button(
+                    onClick = { showDeleteConfirmation = true },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    enabled = !isDeleting, // Disable button while deleting
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = DangerRed.copy(alpha = 0.2f),
+                        disabledContainerColor = Color.Gray.copy(alpha = 0.1f)
+                    ),
+                    border = BorderStroke(1.dp, DangerRed.copy(alpha = 0.4f))
+                ) {
+                    if (isDeleting) {
+                        CircularProgressIndicator(
+                            color = DangerRed,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Delete Account", color = DangerRed, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "Permanent action for ${user?.email}",
+                                color = DangerRed.copy(alpha = 0.7f),
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
                 }
             }
 

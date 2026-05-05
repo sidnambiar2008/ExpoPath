@@ -79,20 +79,22 @@ fun JoinConferenceScreen(
                         contentPadding = PaddingValues(start = 8.dp) // Align it closer to the edge
                     ) {
                         Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = vectorResource(Res.drawable.ic_back_arrow),
-                                contentDescription = "Back",
-                                tint = ActionOrange,
-                                modifier = Modifier.size(20.dp) // Slightly smaller to fit text better
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            androidx.compose.material3.IconButton(onClick = onBackClick) {
+                                Icon(
+                                    imageVector = vectorResource(Res.drawable.ic_back_arrow),
+                                    contentDescription = "Back",
+                                    tint = Turquoise
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Back to Home",
-                                color = ActionOrange,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
+                                text = "Return to Home",
+                                color = Silver,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }

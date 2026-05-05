@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import communitydaynavigationapp.composeapp.generated.resources.Res
 import communitydaynavigationapp.composeapp.generated.resources.ic_daterange
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,11 +31,13 @@ import kotlinx.datetime.LocalDateTime
 import org.communityday.navigation.events.data.AuthRepository
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.take
+import org.communityday.navigation.events.data.SearchViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class, ExperimentalCoroutinesApi::class)
 @Composable
 fun AddConferenceScreen(
     repository: EventRepository,
+    viewModel: SearchViewModel,
     authRepository: AuthRepository,
     onConferenceCreated: (String) -> Unit,
     onBack: () -> Unit,
@@ -97,6 +100,7 @@ fun AddConferenceScreen(
                     val result = authRepository.performSignOut()
                     if (result.isSuccess) {
                         // This is the callback that sends them back to the LoginScreen
+                        viewModel.clearResults()
                         onSwitchAccount()
                     } else {
                         // Optional: show a snackbar or toast
@@ -270,6 +274,6 @@ fun StandardTextField(value: String, onValueChange: (String) -> Unit, label: Str
             focusedLabelColor = accent,
             unfocusedLabelColor = silver.copy(alpha = 0.8f),
         ),
-        maxLines = 2
+        singleLine = true
     )
 }

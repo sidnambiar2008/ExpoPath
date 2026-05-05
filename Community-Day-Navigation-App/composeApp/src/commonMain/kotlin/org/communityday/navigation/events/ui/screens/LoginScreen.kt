@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.IconButton
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,6 +28,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.sp
 import communitydaynavigationapp.composeapp.generated.resources.Res
 import communitydaynavigationapp.composeapp.generated.resources.ic_back_arrow
+import communitydaynavigationapp.composeapp.generated.resources.ic_visibility
+import communitydaynavigationapp.composeapp.generated.resources.ic_visibilityoff
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import kotlinx.coroutines.delay
@@ -56,6 +59,7 @@ fun LoginScreen(
     var successMessage by remember { mutableStateOf<String?>(null) }
     var isCheckingAuth by remember { mutableStateOf(true) }
     var confirmPassword by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
 
     /*
     LaunchedEffect(Unit) {
@@ -109,20 +113,22 @@ fun LoginScreen(
                             contentPadding = PaddingValues(start = 8.dp) // Align it closer to the edge
                         ) {
                             Row(
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = vectorResource(Res.drawable.ic_back_arrow),
-                                    contentDescription = "Back",
-                                    tint = ActionOrange,
-                                    modifier = Modifier.size(20.dp) // Slightly smaller to fit text better
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                androidx.compose.material3.IconButton(onClick = onBackClick) {
+                                    Icon(
+                                        imageVector = vectorResource(Res.drawable.ic_back_arrow),
+                                        contentDescription = "Back",
+                                        tint = Turquoise
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Back to Home",
-                                    color = ActionOrange,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
+                                    text = "Return to Home",
+                                    color = Silver,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
@@ -141,7 +147,7 @@ fun LoginScreen(
                 Text(
                     text = if (isSignUp) "Create Account" else "Login",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White
+                    color = Turquoise
                 )
 
                 Spacer(Modifier.height(16.dp))
@@ -179,27 +185,34 @@ fun LoginScreen(
                     value = password,
                     onValueChange = { password = it },
                     label = { Text("Password") },
-                    visualTransformation = PasswordVisualTransformation(),
+                    // DYNAMIC TRANSFORMATION: Show dots if NOT visible, show text if visible
+                    visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        val image = if (passwordVisible)
+                            vectorResource(Res.drawable.ic_visibility) // You'll need these icons in Res
+                        else
+                            vectorResource(Res.drawable.ic_visibilityoff)
+
+                        val description = if (passwordVisible) "Hide password" else "Show password"
+
+                        androidx.compose.material3.IconButton(
+                            onClick = { passwordVisible = !passwordVisible }
+                        ) {
+                            Icon(imageVector = image, contentDescription = description, tint = Silver)
+                        }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
-                        // BRIGHTEN THE TEXT
                         focusedTextColor = Color.White,
-                        unfocusedTextColor = Silver, // Much lighter than the default dark gray
-
-                        // BRIGHTEN THE BORDER
+                        unfocusedTextColor = Silver,
                         focusedBorderColor = Turquoise,
-                        unfocusedBorderColor = Silver.copy(alpha = 0.7f), // A crisp Silver outline
-
-                        // BRIGHTEN THE LABEL (the hint text)
+                        unfocusedBorderColor = Silver.copy(alpha = 0.7f),
                         focusedLabelColor = Turquoise,
                         unfocusedLabelColor = Silver.copy(alpha = 0.8f),
-
-                        // OPTIONAL: Background color (container)
-                        // If you want the box itself to be slightly lighter than the Navy background:
                         unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
                         focusedContainerColor = Color.Transparent
                     ),
-                    enabled = !isLoading, // Prevent typing while processing
+                    enabled = !isLoading,
                     singleLine = true
                 )
                 if (isSignUp) {
@@ -208,8 +221,22 @@ fun LoginScreen(
                         value = confirmPassword,
                         onValueChange = { confirmPassword = it },
                         label = { Text("Confirm Password") },
-                        visualTransformation = PasswordVisualTransformation(),
+                        // Use the same toggle state here!
+                        visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = {
+                            // Add the icon here too so the user doesn't have to reach up to the first box
+                            androidx.compose.material3.IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    imageVector = if (passwordVisible)
+                                        vectorResource(Res.drawable.ic_visibility)
+                                    else
+                                        vectorResource(Res.drawable.ic_visibilityoff),
+                                    contentDescription = null,
+                                    tint = Silver.copy(alpha = 0.7f)
+                                )
+                            }
+                        },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Silver,
@@ -240,7 +267,7 @@ fun LoginScreen(
                                     val result = authRepo.sendPasswordResetEmail(email)
                                     isLoading = false
                                     if (result.isSuccess) {
-                                        successMessage = "Reset email sent! Check your inbox."
+                                        successMessage = "Reset email sent! Check your inbox or spam."
                                         errorMessage = null
                                     } else {
                                         val rawError = result.exceptionOrNull()?.message
@@ -275,6 +302,18 @@ fun LoginScreen(
                     onClick = {
                         // Focus: Ensure the keyboard/focus is cleared or at least not looping
                         scope.launch {
+                            if (!email.contains("@") || !email.contains(".")) {
+                                errorMessage = "Please enter a valid email address."
+                                return@launch
+                            }
+
+                            // 2. Length check (Primary for Sign Up)
+                            if (isSignUp && password.length < 6) {
+                                errorMessage = "Password must be at least 6 characters."
+                                return@launch
+                            }
+
+                            // 3. Match check
                             if (isSignUp && password != confirmPassword) {
                                 errorMessage = "Passwords do not match."
                                 return@launch
@@ -304,10 +343,16 @@ fun LoginScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ActionOrange, // Sets the background to Turquoise
+                        contentColor = Color.White   // Sets the text color (optional, but better for contrast)
+                    ),
                     // Only enable if fields aren't empty AND not loading
-                    enabled = !isLoading && email.isNotBlank() && password.isNotBlank() &&
-                            (!isSignUp || confirmPassword.isNotBlank())
-                ) {
+                    enabled = !isLoading &&
+                            email.contains("@") &&
+                            email.contains(".") && // Added a check for the dot (e.g., .com)
+                            password.length >= 6 &&
+                            (!isSignUp || (confirmPassword.length >= 6 && confirmPassword == password))) {
                     Text(if (isLoading) "Processing..." else if (isSignUp) "Sign Up" else "Login")
                 }
 
@@ -331,22 +376,28 @@ fun LoginScreen(
             }
         }
     }
-}
-
-fun mapFirebaseError(message: String?): String {
+}fun mapFirebaseError(message: String?): String {
     val error = message ?: ""
     return when {
-        error.contains("invalid-credential") || error.contains("wrong-password") ->
+        // Credential issues
+        error.contains("invalid-credential") || error.contains("wrong-password") ||
+                error.contains("ERROR_INVALID_CREDENTIAL") ->
             "Invalid email or password. Please try again."
-        error.contains("user-not-found") ->
-            "No account found with this email."
-        error.contains("network-request-failed") ->
-            "Connection error. Check your internet."
-        error.contains("too-many-requests") ->
-            "Too many failed attempts. Try again later."
-        error.contains("invalid-email") ->
-            "Please enter a valid email address."
-        error.contains("ERROR_INVALID_CREDENTIAL") -> "Invalid Username or Password"
-        else -> "An unexpected error occurred. Please try again." //+ error
+
+        // Account issues
+        error.contains("user-not-found") -> "No account found with this email."
+        error.contains("email-already-in-use") -> "An account already exists with this email."
+
+        // Password strength (The one you were missing)
+        error.contains("weak-password") -> "Password must be at least 6 characters."
+
+        // Input format
+        error.contains("invalid-email") -> "Please enter a valid email address."
+
+        // System/Network issues
+        error.contains("network-request-failed") -> "Connection error. Check your internet."
+        error.contains("too-many-requests") -> "Too many attempts. Please try again later."
+
+        else -> "Something went wrong. Please try again."
     }
 }

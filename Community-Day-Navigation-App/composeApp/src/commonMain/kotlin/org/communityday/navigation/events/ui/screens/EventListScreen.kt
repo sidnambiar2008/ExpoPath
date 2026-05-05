@@ -101,32 +101,38 @@ fun EventListScreen(
     ) {
         // 1. Header with Switch Code button
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier
+                .fillMaxWidth()
+                // Adding a bit more top padding ensures it doesn't hug the status bar
+                .padding(top = 8.dp, bottom = 16.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.Start
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f) // This forces the title to wrap once it hits the Spacer
+            ) {
                 Text(
-                    // Use the name from Firebase, fallback to the code if loading
-                    text = conference?.name ?: "Loading Conference...",
+                    text = conference?.name ?: "Loading...",
                     color = Silver,
-                    fontSize = 22.sp,
+                    fontSize = 22.sp, // Dropping size slightly to help with long words
                     fontWeight = FontWeight.Bold,
                     lineHeight = 28.sp,
-                    maxLines = 3, // Allows it to wrap onto multiple lines
-                    overflow = TextOverflow.Ellipsis,
-                    // This modifier helps control the "23 characters" feel by
-                    // limiting the width relative to the screen.
-                    modifier = Modifier.fillMaxWidth(0.85f)
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
+
                 Text(
-                    text = "Join Code: $confCode (Change)",
+                    text = "Join Code: $confCode",
                     color = Turquoise,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.clickable { onSwitchCode() }
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .clickable { onSwitchCode() }
                 )
             }
+            Spacer(modifier = Modifier.width(120.dp))
         }
 
         // 2. Error Message
