@@ -271,7 +271,7 @@ fun EventDetailScreen(
                                 imageVector = vectorResource(Res.drawable.ic_flag),
                                 contentDescription = "Report Content",
                                 tint = Color(0xFFCF6679).copy(alpha = 0.8f),
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(32.dp)
                             )
                         }
 
@@ -295,7 +295,7 @@ fun EventDetailScreen(
                                 imageVector = vectorResource(Res.drawable.ic_block),
                                 contentDescription = "Hide Conference",
                                 tint = Color(0xFFCF6679).copy(alpha = 0.8f),
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(32.dp)
                             )
                         }
                     }

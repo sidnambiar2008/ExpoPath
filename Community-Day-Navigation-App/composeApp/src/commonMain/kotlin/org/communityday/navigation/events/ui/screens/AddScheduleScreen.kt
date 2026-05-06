@@ -65,12 +65,8 @@ fun AddScheduleScreen(
     val ActionOrange = Color(0xFFFF8C00)
 
     Column(modifier = Modifier.fillMaxSize().background(NavyBlue).padding(16.dp)) {
-        Text(
-            text = "My Events",
-            color = Silver,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.headlineMedium
-        )
+        Text("My Events", color = Silver, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+
 
         Spacer(modifier = Modifier.height(16.dp))
 

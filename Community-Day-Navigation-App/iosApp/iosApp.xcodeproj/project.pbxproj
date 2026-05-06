@@ -198,7 +198,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = ExpoPath;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "This app needs network access to fetch events.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "\"ExpoPath needs your location to help you set the coordinates for this event or booth.\"";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "ExpoPath needs your location to help you set the coordinates for this event or booth.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ExpoPath needs your location to help you set the coordinates for this event or booth.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -233,7 +234,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = ExpoPath;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "This app needs network access to fetch events.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "\"ExpoPath needs your location to help you set the coordinates for this event or booth.\"";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "ExpoPath needs your location to help you set the coordinates for this event or booth.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ExpoPath needs your location to help you set the coordinates for this event or booth.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

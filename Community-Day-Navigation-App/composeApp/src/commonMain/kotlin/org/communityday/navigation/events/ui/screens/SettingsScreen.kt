@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
@@ -57,7 +58,7 @@ fun SettingsScreen(
                 .padding(24.dp)
                 .verticalScroll(scrollState)
         ) {
-            Text("App Settings", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text("App Settings", color = Silver, fontSize = 24.sp, fontWeight = FontWeight.Bold)
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -68,12 +69,14 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        "Help us keep ExpoPath safe. Report inappropriate content.",
-                        color = Silver,
-                        fontSize = 12.sp,
-                        lineHeight = 18.sp
-                    )
+                    SelectionContainer {
+                        Text(
+                            "Help us keep ExpoPath safe. Report inappropriate content. Feel free to email at expopath.info@gmail.com",
+                            color = Silver,
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp
+                        )
+                    }
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Option 1: Report a Conference
@@ -196,7 +199,7 @@ fun LegalCard(Silver: Color) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("ExpoPath", color = Color.White, fontWeight = FontWeight.Bold)
-            Text("Version 1.0.0", color = Silver, fontSize = 12.sp)
+            Text("Version 1.2", color = Silver, fontSize = 12.sp)
 
             Spacer(modifier = Modifier.height(16.dp))
 

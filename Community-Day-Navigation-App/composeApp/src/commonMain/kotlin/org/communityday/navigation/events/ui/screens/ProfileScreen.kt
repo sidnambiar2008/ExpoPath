@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import communitydaynavigationapp.composeapp.generated.resources.Res
 import communitydaynavigationapp.composeapp.generated.resources.ic_back_arrow
@@ -25,6 +26,7 @@ import communitydaynavigationapp.composeapp.generated.resources.ic_manageaccount
 import communitydaynavigationapp.composeapp.generated.resources.ic_person
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.communityday.navigation.events.data.Conference
 import org.jetbrains.compose.resources.painterResource
@@ -34,6 +36,7 @@ import org.communityday.navigation.events.data.AuthRepository
 import org.communityday.navigation.events.data.SearchViewModel
 
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun ProfileScreen(
     repository: EventRepository,
@@ -51,7 +54,8 @@ fun ProfileScreen(
     val user by authRepository.currentUser.collectAsState(initial = null)
 
     Column(modifier = Modifier.fillMaxSize().background(NavyBlue).padding(16.dp)) {
-        Text("My Account", style = MaterialTheme.typography.headlineMedium, color = Color.White)
+        Text("My Account", color = Silver, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+
 
         Spacer(modifier = Modifier.height(32.dp))
 

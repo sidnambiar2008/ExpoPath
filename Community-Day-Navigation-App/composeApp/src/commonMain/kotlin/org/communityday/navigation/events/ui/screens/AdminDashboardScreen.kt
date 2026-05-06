@@ -441,7 +441,7 @@ fun AddEventDialog(
                     value = location,
                     onValueChange = { location = it },
                     label = { RequiredLabel("Location/Address") },
-                    placeholder = { Text("e.g. Room 204 or 123 Main St") },
+                    placeholder = { Text("Address (or Room # if pinned)") },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 2
                 )
@@ -678,7 +678,7 @@ fun AddBoothDialog(
                     value = location,
                     onValueChange = { location = it },
                     label = { RequiredLabel("Location/Address") },
-                    placeholder = { Text("e.g. Booth 1A or 123 Main St") },
+                    placeholder = { Text("Address (or Booth # if pinned location)") },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3
                 )
