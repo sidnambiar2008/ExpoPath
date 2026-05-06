@@ -199,7 +199,7 @@ fun LegalCard(Silver: Color) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("ExpoPath", color = Color.White, fontWeight = FontWeight.Bold)
-            Text("Version 1.4", color = Silver, fontSize = 12.sp)
+            Text("Version 1.4.3", color = Silver, fontSize = 12.sp)
 
             Spacer(modifier = Modifier.height(16.dp))
 

@@ -196,6 +196,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ExpoPath;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "This app needs network access to fetch events.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "ExpoPath needs your location to help you set the coordinates for this event or booth.";
@@ -210,7 +211,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.4.3;
 				"OTHER_LDFLAGS[arch=*]" = "-Objc";
 				PRODUCT_BUNDLE_IDENTIFIER = org.events.usc.ExpoPath;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -233,6 +234,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ExpoPath;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "This app needs network access to fetch events.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "ExpoPath needs your location to help you set the coordinates for this event or booth.";
@@ -247,7 +249,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.4.3;
 				"OTHER_LDFLAGS[arch=*]" = "-Objc";
 				PRODUCT_BUNDLE_IDENTIFIER = org.events.usc.ExpoPath;
 				SWIFT_EMIT_LOC_STRINGS = YES;
