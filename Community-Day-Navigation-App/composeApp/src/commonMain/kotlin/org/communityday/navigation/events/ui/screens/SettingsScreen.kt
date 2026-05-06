@@ -81,7 +81,7 @@ fun SettingsScreen(
 
                     // Option 1: Report a Conference
                     SafetyLink("Report Inappropriate Conference", DangerRed) {
-                        val formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSdFmVVjKJtAMHQvL-NESv7hXMxnjnmwvf0hJGWt8K7GmC6hYw/viewform?usp=sharing&ouid=100512648276679219316"
+                        val formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSdFmVVjKJtAMHQvL-NESv7hXMxnjnmwvf0hJGWt8K7GmC6hYw/viewform?usp=dialog"
                         uriHandler.openUri(formUrl)
                     }
                 }
